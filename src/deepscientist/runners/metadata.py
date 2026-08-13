@@ -44,6 +44,14 @@ _RUNNER_METADATA: dict[str, RunnerMetadata] = {
         default_config_dir="~/.kimi",
         quest_dotdir=".kimi",
     ),
+    "qwen": RunnerMetadata(
+        name="qwen",
+        label="Qwen (通义千问)",
+        default_binary="qwen",
+        default_config_dir="",
+        quest_dotdir=".qwen",
+        status_note="Custom runner via 阿里云百炼 API",
+    ),
 }
 
 

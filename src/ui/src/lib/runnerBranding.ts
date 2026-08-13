@@ -1,4 +1,4 @@
-export type BuiltinRunnerName = "codex" | "claude" | "kimi" | "opencode"
+export type BuiltinRunnerName = "codex" | "claude" | "kimi" | "opencode" | "qwen"
 
 export type RunnerBranding = {
   name: BuiltinRunnerName
@@ -47,6 +47,15 @@ export const RUNNER_BRANDING: Record<BuiltinRunnerName, RunnerBranding> = {
     accentClassName: "from-emerald-500 via-green-400 to-teal-300 text-[#052516]",
     chipClassName: "bg-emerald-100 text-emerald-700",
   },
+  qwen: {
+    name: "qwen",
+    label: "Qwen (通义千问)",
+    shortLabel: "Qwen",
+    description: "阿里云百炼 Qwen API via custom Python agent runner.",
+    logoSrc: "/assets/branding/runner-qwen.svg",
+    accentClassName: "from-purple-500 via-violet-400 to-indigo-300 text-[#1a0530]",
+    chipClassName: "bg-purple-100 text-purple-700",
+  },
 }
 
 export function normalizeBuiltinRunnerName(value: unknown): BuiltinRunnerName {
@@ -54,6 +63,7 @@ export function normalizeBuiltinRunnerName(value: unknown): BuiltinRunnerName {
   if (normalized === "claude") return "claude"
   if (normalized === "kimi") return "kimi"
   if (normalized === "opencode") return "opencode"
+  if (normalized === "qwen") return "qwen"
   return "codex"
 }
 

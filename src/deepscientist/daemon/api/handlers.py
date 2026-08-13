@@ -2540,7 +2540,7 @@ npm --prefix src/ui run build</pre>
             default_runner = self.app.config_manager._normalize_runtime_runner_name(
                 body["structured"].get("default_runner")
             )
-            if default_runner in {"codex", "claude", "kimi", "opencode"}:
+            if default_runner in {"codex", "claude", "kimi", "opencode", "qwen"}:
                 os.environ["DEEPSCIENTIST_DEFAULT_RUNNER"] = default_runner
                 os.environ["DEEPSCIENTIST_ENABLE_RUNNER"] = default_runner
                 os.environ.pop("DS_DEFAULT_RUNNER", None)

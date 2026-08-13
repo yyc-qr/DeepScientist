@@ -85,7 +85,7 @@ from ..prompts import PromptBuilder
 from ..prompts.builder import classify_turn_intent, current_standard_skills
 from ..connector.qq_profiles import list_qq_profiles, merge_qq_profile_config, normalize_qq_connector_config
 from ..quest import AUTONOMOUS_BLOCKING_WAIT_REASONS, QuestService
-from ..runners import ClaudeRunner, CodexRunner, KimiRunner, OpenCodeRunner, RunRequest, get_runner_factory, register_builtin_runners
+from ..runners import ClaudeRunner, CodexRunner, KimiRunner, OpenCodeRunner, QwenRunner, RunRequest, get_runner_factory, register_builtin_runners
 from ..runners.metadata import get_runner_metadata
 from ..runtime_logs import JsonlLogger
 from ..shared import append_jsonl, ensure_dir, generate_id, iter_jsonl, read_json, read_jsonl, read_jsonl_tail, read_text, resolve_within, run_command, slugify, utc_now, utf8_text_subprocess_kwargs, which, write_json
@@ -281,11 +281,20 @@ class DaemonApp:
             prompt_builder=self.prompt_builder,
             artifact_service=self.artifact_service,
         )
+        self.qwen_runner = QwenRunner(
+            home=home,
+            repo_root=self.repo_root,
+            binary="qwen",
+            logger=self.logger,
+            prompt_builder=self.prompt_builder,
+            artifact_service=self.artifact_service,
+        )
         register_builtin_runners(
             codex_runner=self.codex_runner,
             claude_runner=self.claude_runner,
             kimi_runner=self.kimi_runner,
             opencode_runner=self.opencode_runner,
+            qwen_runner=self.qwen_runner,
         )
         register_builtin_connector_bridges()
         register_builtin_channels(home=home, connectors_config=self.connectors_config)
@@ -1644,6 +1653,7 @@ class DaemonApp:
             "claude": self.claude_runner,
             "kimi": self.kimi_runner,
             "opencode": self.opencode_runner,
+            "qwen": self.qwen_runner,
         }
         payload: dict[str, object] = {
             "ok": True,

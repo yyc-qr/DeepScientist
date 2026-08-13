@@ -782,6 +782,8 @@ Use **Test** when the file exposes runtime dependencies.
             result = self._probe_kimi_runner(runner_payload)
         elif normalized_runner == "opencode":
             result = self._probe_opencode_runner(runner_payload)
+        elif normalized_runner == "qwen":
+            result = self._probe_qwen_runner(runner_payload)
         else:
             raise KeyError(f"Unknown runner `{normalized_runner}`.")
         if persist:
@@ -2329,6 +2331,92 @@ Use **Test** when the file exposes runtime dependencies.
                 "If OpenCode uses a custom config root, point `runners.opencode.config_dir` at the correct directory.",
             ],
         }
+
+    def _probe_qwen_runner(self, config: dict) -> dict:
+        checked_at = utc_now()
+        runner_env = config.get("env") if isinstance(config.get("env"), dict) else {}
+        api_key = str(runner_env.get("QWEN_API_KEY", "") or os.environ.get("QWEN_API_KEY", "")).strip()
+        model = str(config.get("model") or "qwen-plus").strip() or "qwen-plus"
+        if model == "inherit":
+            model = "qwen-plus"
+        details: dict[str, object] = {
+            "binary": "qwen",
+            "resolved_binary": "qwen_agent.py (Python)",
+            "model": model,
+            "requested_model": model,
+            "effective_model": model,
+            "checked_at": checked_at,
+        }
+        if not api_key:
+            return {
+                "ok": False,
+                "summary": "Qwen runner startup probe failed: no API key configured.",
+                "warnings": [],
+                "errors": ["QWEN_API_KEY is not set in runners.yaml env or environment."],
+                "details": details,
+                "guidance": [
+                    "Add `QWEN_API_KEY` to `runners.qwen.env` in runners.yaml.",
+                    "Or set the `QWEN_API_KEY` environment variable before starting DeepScientist.",
+                    "Get your API key from https://bailian.console.aliyun.com",
+                ],
+            }
+        # live probe: call Qwen API with a trivial message
+        import urllib.request
+        import json as _json
+        url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+        body = _json.dumps({
+            "model": model,
+            "messages": [{"role": "user", "content": "Reply with exactly HELLO"}],
+            "max_tokens": 10,
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                resp_data = _json.loads(resp.read().decode("utf-8"))
+            choice = resp_data.get("choices", [{}])[0]
+            response_text = str(choice.get("message", {}).get("content", "") or "").strip()
+            ok = "HELLO" in response_text.upper()
+            details.update({
+                "exit_code": 0,
+                "stdout_excerpt": response_text[:200],
+                "stderr_excerpt": "",
+            })
+            return {
+                "ok": ok,
+                "summary": "Qwen API startup probe completed." if ok else "Qwen API startup probe failed.",
+                "warnings": [],
+                "errors": [] if ok else [f"Qwen API did not return HELLO. Response: {response_text[:200]}"],
+                "details": details,
+                "guidance": [] if ok else [
+                    "Verify the QWEN_API_KEY is valid.",
+                    "Check that the model name is correct (qwen-plus, qwen-max, qwen-turbo).",
+                    "Confirm your 百炼 account has available quota.",
+                ],
+            }
+        except Exception as exc:
+            details.update({
+                "exit_code": 1,
+                "stdout_excerpt": "",
+                "stderr_excerpt": str(exc)[:200],
+            })
+            return {
+                "ok": False,
+                "summary": "Qwen API startup probe failed with an error.",
+                "warnings": [],
+                "errors": [f"Qwen API call failed: {exc}"],
+                "details": details,
+                "guidance": [
+                    "Check network connectivity to dashscope.aliyuncs.com.",
+                    "Verify the QWEN_API_KEY is correct and has not expired.",
+                ],
+            }
 
     def _probe_kimi_runner(self, config: dict) -> dict:
         checked_at = utc_now()
