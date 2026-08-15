@@ -7,12 +7,21 @@ from typing import Any, Iterable
 import networkx as nx
 
 from ..shared import ensure_dir, generate_id, read_json, utc_now, write_json
+from .service import MemoryService
 
 NODE_TYPES = ("idea", "experiment", "method", "failure")
 EDGE_TYPES = ("implements", "validates", "evolves_into", "contradicts", "fails_with")
 
 GRAPH_FILENAME = "knowledge_graph.gml"
 EMBEDDINGS_FILENAME = "embeddings.json"
+
+_CARD_KIND_TO_NODE_TYPE = {
+    "idea": "idea",
+    "ideas": "idea",
+    "episode": "failure",
+    "episodes": "failure",
+    "knowledge": "method",
+}
 
 _GML_SCALAR_TYPES = (str, int, float, bool)
 
@@ -47,6 +56,11 @@ class GraphStore:
         nx.write_gml(self.graph, str(self.graph_path))
         write_json(self.embeddings_path, self._embeddings)
         return self
+
+    def clear(self) -> None:
+        """Drop all nodes, edges, and cached embeddings."""
+        self.graph.clear()
+        self._embeddings.clear()
 
     def add_node(
         self,
@@ -157,6 +171,100 @@ class GraphStore:
             raise ValueError(f"Node `{node_id}` does not exist in the graph.")
         self._embeddings[str(node_id)] = [float(value) for value in vector]
 
+    def sync_from_cards(
+        self,
+        cards: Iterable[dict[str, Any]],
+        *,
+        rebuild: bool = False,
+    ) -> dict[str, Any]:
+        """Build the graph from memory cards, using card ids as node ids.
+
+        Card kinds map to node types as: ideas -> idea, episodes -> failure,
+        knowledge -> method. Papers, decisions, and templates are skipped for
+        now. Edges are derived from card frontmatter fields ``evolved_from``,
+        ``contradicted_by``, and ``fails_with``; references that point to
+        missing nodes are reported instead of failing. Re-running with the same
+        cards is idempotent; ``rebuild=True`` clears the graph first.
+        """
+        if rebuild:
+            self.clear()
+
+        card_list = list(cards)
+        seen = 0
+        created = 0
+        updated = 0
+        skipped_cards: list[dict[str, str]] = []
+        mapped: list[dict[str, Any]] = []
+
+        for card in card_list:
+            seen += 1
+            kind = self._card_kind(card)
+            node_type = _CARD_KIND_TO_NODE_TYPE.get(kind)
+            node_id = str(card.get("id") or "").strip()
+            if node_type is None or not node_id:
+                skipped_cards.append({"id": node_id, "kind": kind or "unknown"})
+                continue
+            mapped.append(card)
+
+            existed = node_id in self.graph
+            metadata = card.get("metadata") or {}
+            summary = (
+                str(card.get("title") or metadata.get("title") or "").strip()
+                or "Untitled"
+            )
+            attrs: dict[str, Any] = {}
+            if card.get("path"):
+                attrs["card_path"] = str(card["path"])
+            if card.get("scope"):
+                attrs["scope"] = str(card["scope"])
+            if metadata.get("tags"):
+                attrs["tags"] = metadata["tags"]
+            for key in ("created_at", "updated_at"):
+                if metadata.get(key):
+                    attrs[key] = metadata[key]
+            if metadata.get("status"):
+                attrs["status"] = str(metadata["status"])
+            self.add_node(
+                node_id=node_id,
+                node_type=node_type,
+                summary=summary,
+                **attrs,
+            )
+            if existed:
+                updated += 1
+            else:
+                created += 1
+
+        edges_created = 0
+        skipped_refs: list[str] = []
+        for card in mapped:
+            node_id = str(card.get("id") or "").strip()
+            metadata = card.get("metadata") or {}
+            for ref in self._as_id_list(metadata.get("evolved_from")):
+                if self._try_add_edge(ref, node_id, "evolves_into"):
+                    edges_created += 1
+                elif ref != node_id:
+                    skipped_refs.append(ref)
+            for ref in self._as_id_list(metadata.get("contradicted_by")):
+                if self._try_add_edge(ref, node_id, "contradicts"):
+                    edges_created += 1
+                elif ref != node_id:
+                    skipped_refs.append(ref)
+            for ref in self._as_id_list(metadata.get("fails_with")):
+                if self._try_add_edge(node_id, ref, "fails_with"):
+                    edges_created += 1
+                elif ref != node_id:
+                    skipped_refs.append(ref)
+
+        return {
+            "cards_seen": seen,
+            "nodes_created": created,
+            "nodes_updated": updated,
+            "edges_created": edges_created,
+            "skipped_cards": skipped_cards,
+            "skipped_refs": sorted(set(skipped_refs)),
+        }
+
     @staticmethod
     def _sanitize_attrs(attrs: dict[str, Any]) -> dict[str, Any]:
         """Normalize attribute values to GML-writable primitives."""
@@ -187,12 +295,36 @@ class GraphStore:
             raise ValueError(f"Unknown edge type `{edge_type}`. Available: {', '.join(EDGE_TYPES)}.")
         return normalized
 
+    def _try_add_edge(self, source: str, target: str, edge_type: str) -> bool:
+        if source == target:
+            return False
+        if source not in self.graph or target not in self.graph:
+            return False
+        if self.graph.has_edge(source, target):
+            return False
+        self.add_edge(source=source, target=target, edge_type=edge_type)
+        return True
+
+    @staticmethod
+    def _card_kind(card: dict[str, Any]) -> str:
+        metadata = card.get("metadata") or {}
+        raw = card.get("type") or metadata.get("kind") or metadata.get("type") or ""
+        return str(raw).strip().lower()
+
+    @staticmethod
+    def _as_id_list(value: Any) -> list[str]:
+        if value is None:
+            return []
+        raw_values = value if isinstance(value, (list, tuple)) else [value]
+        return [str(item).strip() for item in raw_values if str(item).strip()]
+
 
 class MemoryGraphService:
     """Scope-aware access to per-quest and global knowledge graphs."""
 
     def __init__(self, home: Path) -> None:
         self.home = home
+        self.memory = MemoryService(home)
 
     def _root_for(self, scope: str, quest_root: Path | None = None) -> Path:
         if scope == "global":
@@ -205,3 +337,32 @@ class MemoryGraphService:
 
     def open_graph(self, *, scope: str = "quest", quest_root: Path | None = None) -> GraphStore:
         return GraphStore(self._root_for(scope, quest_root)).load()
+
+    def sync_scope(
+        self,
+        *,
+        scope: str = "quest",
+        quest_root: Path | None = None,
+        rebuild: bool = False,
+    ) -> dict[str, Any]:
+        """Reconcile the graph for a scope with the cards under that scope."""
+        root = self._root_for(scope, quest_root)
+        store = GraphStore(root).load()
+        cards = self.memory.list_cards(
+            scope=scope,
+            quest_root=quest_root,
+            limit=100000,
+            kind=None,
+        )
+        full_cards = [
+            self.memory.read_card(
+                card_id=card.get("id"),
+                path=card.get("path"),
+                scope=scope,
+                quest_root=quest_root,
+            )
+            for card in cards
+        ]
+        result = store.sync_from_cards(full_cards, rebuild=rebuild)
+        store.save()
+        return result

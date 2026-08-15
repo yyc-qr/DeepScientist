@@ -12,6 +12,28 @@ from deepscientist.memory.graph import (
     GraphStore,
     MemoryGraphService,
 )
+from deepscientist.memory.service import MemoryService
+
+
+def _card(node_id: str, kind: str, title: str, **meta: object) -> dict:
+    metadata = {
+        "id": node_id,
+        "kind": kind,
+        "type": kind,
+        "title": title,
+        **meta,
+    }
+    return {
+        "id": node_id,
+        "title": title,
+        "type": kind,
+        "path": f"memory/{kind}/{node_id}.md",
+        "scope": "quest",
+        "metadata": metadata,
+        "body": "body",
+        "updated_at": "2026-08-15T00:00:00+00:00",
+        "excerpt": "body",
+    }
 
 
 def test_node_and_edge_type_constants() -> None:
@@ -167,3 +189,105 @@ def test_memory_graph_service_resolves_scope_roots(tmp_path: Path) -> None:
 
     global_store = service.open_graph(scope="global")
     assert global_store.root == tmp_path / "memory"
+
+
+def test_sync_from_cards_maps_kinds_and_builds_edges(tmp_path: Path) -> None:
+    store = GraphStore(tmp_path)
+    result = store.sync_from_cards(
+        [
+            _card("idea-a", "ideas", "Idea A", status="proposed"),
+            _card(
+                "idea-b",
+                "ideas",
+                "Idea B",
+                evolved_from=["idea-a"],
+                contradicted_by="method-x",
+                fails_with="failure-1",
+            ),
+            _card("method-x", "knowledge", "Method X"),
+            _card("failure-1", "episodes", "OOM pattern"),
+            _card("paper-1", "papers", "Paper 1"),
+        ]
+    )
+
+    assert result["cards_seen"] == 5
+    assert result["nodes_created"] == 4
+    assert result["edges_created"] == 3
+    assert result["skipped_cards"] == [{"id": "paper-1", "kind": "papers"}]
+    assert {node["id"] for node in store.nodes()} == {
+        "idea-a",
+        "idea-b",
+        "method-x",
+        "failure-1",
+    }
+
+    assert store.graph["idea-a"]["idea-b"]["type"] == "evolves_into"
+    assert store.graph["method-x"]["idea-b"]["type"] == "contradicts"
+    assert store.graph["idea-b"]["failure-1"]["type"] == "fails_with"
+    assert store.get_node("idea-a")["status"] == "proposed"
+    assert store.get_node("idea-b")["status"] == "active"
+    assert "tags" not in store.get_node("idea-b")
+
+
+def test_sync_from_cards_is_idempotent(tmp_path: Path) -> None:
+    store = GraphStore(tmp_path)
+    cards = [
+        _card("idea-a", "ideas", "Idea A"),
+        _card("method-x", "knowledge", "Method X", evolved_from="idea-a"),
+    ]
+
+    first = store.sync_from_cards(cards)
+    second = store.sync_from_cards(cards)
+
+    assert first["nodes_created"] == 2
+    assert first["edges_created"] == 1
+    assert second["nodes_created"] == 0
+    assert second["nodes_updated"] == 2
+    assert second["edges_created"] == 0
+    assert set(store.graph.nodes) == {"idea-a", "method-x"}
+    assert len(store.edges()) == 1
+
+
+def test_sync_rebuild_clears_stale_nodes(tmp_path: Path) -> None:
+    store = GraphStore(tmp_path)
+    store.sync_from_cards(
+        [_card("idea-a", "ideas", "Idea A"), _card("method-x", "knowledge", "Method X")]
+    )
+    result = store.sync_from_cards(
+        [_card("method-x", "knowledge", "Method X updated")],
+        rebuild=True,
+    )
+
+    assert set(store.graph.nodes) == {"method-x"}
+    assert store.get_node("method-x")["summary"] == "Method X updated"
+    assert result["nodes_created"] == 1
+    assert result["edges_created"] == 0
+
+
+def test_sync_scope_end_to_end(tmp_path: Path) -> None:
+    quest_root = tmp_path / "quests" / "q1"
+    memory = MemoryService(tmp_path)
+    memory.write_card(
+        scope="quest",
+        kind="ideas",
+        title="Idea A",
+        quest_root=quest_root,
+        quest_id="q1",
+        metadata={"evolved_from": []},
+    )
+    memory.write_card(
+        scope="quest",
+        kind="episodes",
+        title="OOM pattern",
+        quest_root=quest_root,
+        quest_id="q1",
+    )
+
+    service = MemoryGraphService(tmp_path)
+    result = service.sync_scope(scope="quest", quest_root=quest_root)
+
+    assert result["cards_seen"] == 2
+    assert result["nodes_created"] == 2
+    assert (quest_root / "memory" / GRAPH_FILENAME).exists()
+    store = service.open_graph(scope="quest", quest_root=quest_root)
+    assert {node["type"] for node in store.nodes()} == {"idea", "failure"}
