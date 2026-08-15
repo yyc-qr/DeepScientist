@@ -372,8 +372,9 @@ class GraphStore:
 class MemoryGraphService:
     """Scope-aware access to per-quest and global knowledge graphs."""
 
-    def __init__(self, home: Path) -> None:
+    def __init__(self, home: Path, *, llm: Any | None = None) -> None:
         self.home = home
+        self.llm = llm
         self.memory = MemoryService(home)
 
     def _root_for(self, scope: str, quest_root: Path | None = None) -> Path:
@@ -756,7 +757,7 @@ class MemoryGraphService:
         return changes
 
     def _default_llm(self) -> Any:
-        return QwenClient(self.home)
+        return self.llm or QwenClient(self.home)
 
     @staticmethod
     def _normalize_discovered_edge(

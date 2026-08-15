@@ -12,7 +12,7 @@ from deepscientist.bash_exec import BashExecService
 from deepscientist.config import ConfigManager
 from deepscientist.daemon.app import DaemonApp
 from deepscientist.home import ensure_home_layout, repo_root
-from deepscientist.memory import MemoryService
+from deepscientist.memory import MemoryGraphService, MemoryService
 from deepscientist.mcp.context import McpContext
 from deepscientist.mcp.server import build_artifact_server, build_bash_exec_server, build_memory_server
 from deepscientist.quest import QuestService
@@ -149,11 +149,15 @@ def test_memory_mcp_server_tools_cover_core_flows(temp_home: Path) -> None:
             "search",
             "list_recent",
             "promote_to_global",
+            "graph_sync",
+            "graph_search",
+            "classify_failure",
         ]
         tool_map = {tool.name: tool for tool in tools}
         assert tool_map["read"].annotations.readOnlyHint is True
         assert tool_map["search"].annotations.readOnlyHint is True
         assert tool_map["list_recent"].annotations.readOnlyHint is True
+        assert tool_map["graph_search"].annotations.readOnlyHint is True
 
         write_result = _unwrap_tool_result(
             await server.call_tool(
@@ -2883,5 +2887,99 @@ def test_artifact_confirm_baseline_state_change_watchdog_requires_follow_up_upda
         assert "state_change_watchdog_note" in result
         assert "artifact.interact" in str(result["state_change_watchdog_note"])
         assert any(item["kind"] == "state_change" for item in result["watchdog_notes"])
+
+    asyncio.run(scenario())
+
+
+class FakeQwenClient:
+    def __init__(
+        self,
+        chat_response: str,
+        *,
+        embeddings: dict[str, list[float]] | None = None,
+    ) -> None:
+        self.chat_response = chat_response
+        self.embeddings = embeddings or {}
+        self.calls: list[dict] = []
+
+    def chat(self, system: str, user: str, *, json_mode: bool = True) -> str:
+        self.calls.append({"system": system, "user": user, "json_mode": json_mode})
+        return self.chat_response
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [self.embeddings.get(text, [0.1, 0.2, 0.3]) for text in texts]
+
+
+def test_memory_mcp_graph_tools_sync_search_and_classify(temp_home: Path) -> None:
+    async def scenario() -> None:
+        ensure_home_layout(temp_home)
+        ConfigManager(temp_home).ensure_files()
+        quest = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home)).create(
+            "mcp memory graph quest"
+        )
+        quest_root = Path(quest["quest_root"])
+        context = McpContext(
+            home=temp_home,
+            quest_id=quest["quest_id"],
+            quest_root=quest_root,
+            run_id="run-mcp-memory-graph",
+            active_anchor="baseline",
+            conversation_id="quest:test",
+            agent_role="baseline",
+            worker_id="worker-main",
+            worktree_root=None,
+            team_mode="single",
+        )
+        memory = MemoryService(temp_home)
+        idea = memory.write_card(
+            scope="quest",
+            kind="ideas",
+            title="T-Detect hypothesis",
+            body="Use t-distribution normalization.",
+            quest_root=quest_root,
+            quest_id=quest["quest_id"],
+        )
+        fake = FakeQwenClient(
+            json.dumps({"ids": [idea["id"]]}),
+            embeddings={"T-Detect detector evolution": [0.9, 0.1, 0.0]},
+        )
+        graph_service = MemoryGraphService(temp_home, llm=fake)
+        server = build_memory_server(context, memory_graph=graph_service)
+
+        sync_result = _unwrap_tool_result(
+            await server.call_tool("graph_sync", {"scope": "quest"})
+        )
+        assert sync_result["nodes_created"] >= 1
+
+        search_result = _unwrap_tool_result(
+            await server.call_tool(
+                "graph_search",
+                {"query": "T-Detect detector evolution", "scope": "quest", "k": 3},
+            )
+        )
+        assert search_result["count"] >= 1
+        assert search_result["items"][0]["id"] == idea["id"]
+
+        failure_result = _unwrap_tool_result(
+            await server.call_tool(
+                "classify_failure",
+                {
+                    "idea_id": idea["id"],
+                    "experiment_id": "exp-mcp-001",
+                    "summary": "T-Detect hypothesis",
+                    "error": "AUROC did not improve",
+                    "category": "hypothesis_invalid",
+                    "reason": "no gain over baseline",
+                },
+            )
+        )
+        assert failure_result["category"] == "hypothesis_invalid"
+        assert failure_result["idea_dead_end"] is True
+
+        reloaded = MemoryGraphService(temp_home, llm=fake).open_graph(
+            scope="quest",
+            quest_root=quest_root,
+        )
+        assert reloaded.get_node(idea["id"])["status"] == "dead_end"
 
     asyncio.run(scenario())
