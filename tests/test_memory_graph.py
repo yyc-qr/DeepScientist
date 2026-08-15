@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -424,3 +425,116 @@ def test_record_failure_auto_classifies_when_category_missing(tmp_path: Path) ->
     reloaded = GraphStore(quest_root / "memory").load()
     assert reloaded.get_node("exp-003")["failure_category"] == "marginal"
     assert reloaded.get_node(idea_id)["status"] == "active"
+
+
+def _link_discovery_graph(quest_root: Path) -> GraphStore:
+    store = GraphStore(quest_root / "memory")
+    store.add_node(node_id="idea-a", node_type="idea", summary="T-Detect")
+    store.add_node(node_id="method-x", node_type="method", summary="TDT")
+    store.add_node(node_id="failure-1", node_type="failure", summary="OOM pattern")
+    store.add_node(node_id="idea-b", node_type="idea", summary="PA-TDT")
+    store.save()
+    return store
+
+
+def test_link_discovery_adds_edges(tmp_path: Path) -> None:
+    quest_root = tmp_path / "quests" / "q1"
+    _link_discovery_graph(quest_root)
+    fake = FakeQwenClient(
+        json.dumps(
+            {
+                "edges": [
+                    {"from": "idea-a", "edge": "evolves_into", "to": "idea-b"},
+                    {"from": "idea-b", "edge": "contradicts", "to": "method-x"},
+                    {"from": "idea-b", "edge": "fails_with", "to": "failure-1"},
+                ]
+            }
+        )
+    )
+    service = MemoryGraphService(tmp_path)
+
+    result = service.link_discovery(
+        scope="quest",
+        quest_root=quest_root,
+        node_id="idea-b",
+        llm=fake,
+    )
+
+    assert result["edges_added"] == 3
+    reloaded = GraphStore(quest_root / "memory").load()
+    assert reloaded.graph["idea-a"]["idea-b"]["type"] == "evolves_into"
+    assert reloaded.graph["idea-b"]["method-x"]["type"] == "contradicts"
+    assert reloaded.graph["idea-b"]["failure-1"]["type"] == "fails_with"
+
+
+def test_link_discovery_normalizes_reversed_direction(tmp_path: Path) -> None:
+    quest_root = tmp_path / "quests" / "q1"
+    _link_discovery_graph(quest_root)
+    fake = FakeQwenClient(
+        json.dumps(
+            {
+                "edges": [
+                    {"from": "idea-b", "edge": "evolves_into", "to": "idea-a"},
+                ]
+            }
+        )
+    )
+    service = MemoryGraphService(tmp_path)
+
+    result = service.link_discovery(
+        scope="quest",
+        quest_root=quest_root,
+        node_id="idea-b",
+        llm=fake,
+    )
+
+    assert result["edges_added"] == 1
+    assert result["edges"] == [
+        {"source": "idea-a", "target": "idea-b", "edge_type": "evolves_into"}
+    ]
+
+
+def test_link_discovery_skips_invalid_edges(tmp_path: Path) -> None:
+    quest_root = tmp_path / "quests" / "q1"
+    _link_discovery_graph(quest_root)
+    fake = FakeQwenClient(
+        json.dumps(
+            {
+                "edges": [
+                    {"from": "missing", "edge": "evolves_into", "to": "idea-b"},
+                    {"from": "idea-b", "edge": "validates", "to": "idea-a"},
+                    {"from": "idea-b", "edge": "links", "to": "idea-a"},
+                    {"from": "idea-a", "edge": "evolves_into", "to": "idea-b"},
+                ]
+            }
+        )
+    )
+    service = MemoryGraphService(tmp_path)
+
+    result = service.link_discovery(
+        scope="quest",
+        quest_root=quest_root,
+        node_id="idea-b",
+        llm=fake,
+    )
+
+    assert result["edges_added"] == 1
+    assert result["edges"][0] == {
+        "source": "idea-a",
+        "target": "idea-b",
+        "edge_type": "evolves_into",
+    }
+    assert len(result["skipped"]) == 3
+
+
+def test_link_discovery_requires_existing_node(tmp_path: Path) -> None:
+    quest_root = tmp_path / "quests" / "q1"
+    _link_discovery_graph(quest_root)
+    service = MemoryGraphService(tmp_path)
+    with pytest.raises(ValueError, match="does not exist"):
+        service.link_discovery(
+            scope="quest",
+            quest_root=quest_root,
+            node_id="missing-node",
+            llm=FakeQwenClient("{}"),
+        )

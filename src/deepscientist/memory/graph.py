@@ -19,6 +19,12 @@ FAILURE_CATEGORIES = (
     "marginal",
     "unexpected",
 )
+LINK_DISCOVERY_EDGE_TYPES = (
+    "evolves_into",
+    "contradicts",
+    "validates",
+    "fails_with",
+)
 
 GRAPH_FILENAME = "knowledge_graph.gml"
 EMBEDDINGS_FILENAME = "embeddings.json"
@@ -32,6 +38,18 @@ CLASSIFY_FAILURE_SYSTEM_PROMPT = (
     "- hypothesis_invalid: the hypothesis itself does not hold; record permanently\n"
     "- marginal: positive signal but not enough to beat the baseline\n"
     "- unexpected: main task failed but an unexpected positive signal appeared\n"
+)
+
+LINK_DISCOVERY_SYSTEM_PROMPT = (
+    "You discover typed relations between a new scientific finding and existing "
+    "knowledge graph nodes. Reply with a JSON object only: "
+    "{\"edges\": [{\"from\": \"existing node id\", \"edge\": \"...\", \"to\": \"new node id\"}]}.\n"
+    "Edge types:\n"
+    "- evolves_into: the new finding is a gradual evolution of an existing idea or method\n"
+    "- contradicts: the new finding contradicts an existing conclusion\n"
+    "- validates: an experiment validates a method\n"
+    "- fails_with: an idea failed because of a known failure pattern\n"
+    "Only reference node ids that appear in the provided node list."
 )
 
 _CARD_KIND_TO_NODE_TYPE = {
@@ -421,6 +439,93 @@ class MemoryGraphService:
             "reason": str(payload.get("reason") or "").strip(),
         }
 
+    def link_discovery(
+        self,
+        *,
+        scope: str = "quest",
+        quest_root: Path | None = None,
+        node_id: str,
+        context_nodes: list[str] | None = None,
+        limit: int = 20,
+        llm: Any | None = None,
+    ) -> dict[str, Any]:
+        """Ask QWEN to connect a new node to existing nodes with typed edges.
+
+        Directions are normalized to graph conventions: ``evolves_into`` points
+        from the earlier node to the new one, ``contradicts`` points from the
+        new finding to the old conclusion, ``validates`` points from experiment
+        to method, and ``fails_with`` points from idea to failure. Proposals
+        that miss endpoints or violate those type conventions are skipped.
+        """
+        root = self._root_for(scope, quest_root)
+        store = GraphStore(root).load()
+        if node_id not in store.graph:
+            raise ValueError(f"Node `{node_id}` does not exist in the graph.")
+
+        node = store.get_node(node_id)
+        candidate_ids = [candidate for candidate in context_nodes or [] if candidate != node_id]
+        if not candidate_ids:
+            candidate_ids = [candidate for candidate in sorted(store.graph.nodes) if candidate != node_id]
+        candidate_ids = candidate_ids[: max(1, int(limit or 20))]
+
+        node_lines = "\n".join(
+            f"- {candidate} [{store.get_node(candidate)['type']}] "
+            f"{store.get_node(candidate)['summary']}"
+            for candidate in candidate_ids
+        )
+        user = (
+            "New node: "
+            f"{node_id} [{node['type']}] {node['summary']}\n"
+            "Existing nodes:\n"
+            f"{node_lines}\n\n"
+            "Return the typed edges between the new node and the existing nodes."
+        )
+        client = llm or self._default_llm()
+        raw = client.chat(
+            system=LINK_DISCOVERY_SYSTEM_PROMPT,
+            user=user,
+            json_mode=True,
+        )
+        payload = parse_json_object(raw)
+        proposals = payload.get("edges") or []
+
+        edges: list[dict[str, Any]] = []
+        skipped: list[dict[str, str]] = []
+        for item in proposals:
+            if not isinstance(item, dict):
+                skipped.append({"reason": "non-object proposal", "item": str(item)[:200]})
+                continue
+            source = str(item.get("from") or "").strip()
+            target = str(item.get("to") or "").strip()
+            edge_type = str(item.get("edge") or "").strip().lower()
+            normalized, reason = self._normalize_discovered_edge(
+                store,
+                node_id=node_id,
+                source=source,
+                target=target,
+                edge_type=edge_type,
+            )
+            if normalized is None:
+                skipped.append({"reason": reason, "edge": edge_type, "from": source, "to": target})
+                continue
+            resolved_source, resolved_target = normalized
+            store.add_edge(source=resolved_source, target=resolved_target, edge_type=edge_type)
+            edges.append(
+                {
+                    "source": resolved_source,
+                    "target": resolved_target,
+                    "edge_type": edge_type,
+                }
+            )
+
+        store.save()
+        return {
+            "node_id": node_id,
+            "edges_added": len(edges),
+            "edges": edges,
+            "skipped": skipped,
+        }
+
     def record_failure(
         self,
         *,
@@ -515,3 +620,48 @@ class MemoryGraphService:
 
     def _default_llm(self) -> Any:
         return QwenClient(self.home)
+
+    @staticmethod
+    def _normalize_discovered_edge(
+        store: GraphStore,
+        *,
+        node_id: str,
+        source: str,
+        target: str,
+        edge_type: str,
+    ) -> tuple[tuple[str, str], str] | tuple[None, str]:
+        if edge_type not in LINK_DISCOVERY_EDGE_TYPES:
+            return None, f"unsupported edge type `{edge_type}`"
+        if source not in store.graph or target not in store.graph:
+            return None, "missing endpoint"
+        if node_id not in {source, target}:
+            return None, "edge does not involve the new node"
+        if edge_type == "evolves_into":
+            source_type = store.get_node(source)["type"]
+            target_type = store.get_node(target)["type"]
+            if source_type != target_type or source_type not in {"idea", "method"}:
+                return None, "evolves_into requires idea -> idea or method -> method"
+            if target == node_id:
+                return (source, target), ""
+            return (target, node_id), ""
+        if edge_type == "contradicts":
+            if source == node_id:
+                return (source, target), ""
+            return (target, node_id), ""
+        if edge_type == "validates":
+            source_type = store.get_node(source)["type"]
+            target_type = store.get_node(target)["type"]
+            if source_type == "experiment" and target_type == "method":
+                return (source, target), ""
+            if source_type == "method" and target_type == "experiment":
+                return (target, source), ""
+            return None, "validates requires experiment -> method"
+        if edge_type == "fails_with":
+            source_type = store.get_node(source)["type"]
+            target_type = store.get_node(target)["type"]
+            if source_type == "idea" and target_type == "failure":
+                return (source, target), ""
+            if source_type == "failure" and target_type == "idea":
+                return (target, source), ""
+            return None, "fails_with requires idea -> failure"
+        return (source, target), ""
