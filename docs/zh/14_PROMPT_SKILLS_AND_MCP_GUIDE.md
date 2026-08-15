@@ -414,9 +414,6 @@ DeepScientist 故意把内建 MCP 面压得很小。
 - `memory.search(...)`
 - `memory.list_recent(...)`
 - `memory.promote_to_global(...)`
-- `memory.graph_sync(...)`
-- `memory.graph_search(...)`
-- `memory.classify_failure(...)`
 
 当输出应该被后续轮次继续复用时，用 `memory`。
 
