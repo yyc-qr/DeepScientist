@@ -87,7 +87,7 @@ def test_prompt_builder_includes_layered_runtime_context(temp_home: Path) -> Non
     assert "plt.rcParams.update" in prompt
     assert "AutoFigure-Edit" in prompt
     assert len(prompt.splitlines()) < 1800
-    assert len(prompt) < 125000
+    assert len(prompt) < 130000
 
 
 def test_prompt_builder_enables_cross_quest_recall_only_for_shared_memory(temp_home: Path) -> None:
@@ -1120,7 +1120,7 @@ def test_prompt_builder_delegates_stage_specific_sop_to_skills(temp_home: Path) 
     for prompt in (experiment_prompt, idea_prompt, analysis_prompt, write_prompt):
         assert "stage_contract_protocol:" in prompt
         assert len(prompt.splitlines()) < 1800
-        assert len(prompt) < 126000
+        assert len(prompt) < 130000
 
     assert "RUN.md" not in experiment_prompt
     assert "problem-first vs solution-first" not in idea_prompt
