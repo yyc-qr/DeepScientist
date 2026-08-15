@@ -271,6 +271,9 @@ The `memory` namespace currently provides:
 - `search`
 - `list_recent`
 - `promote_to_global`
+- `graph_sync`
+- `graph_search`
+- `classify_failure`
 
 Memory cards are Markdown files with YAML frontmatter and are managed as durable files.
 

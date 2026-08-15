@@ -196,6 +196,54 @@ Use it only when:
 - it has become stable
 - another quest would likely benefit
 
+### `memory.graph_sync(...)`
+
+Purpose:
+
+- reconcile or rebuild the quest knowledge graph from memory cards
+
+Use it:
+
+- after writing cards when graph retrieval should see them
+- with `rebuild=True` only when the graph should be rebuilt from scratch
+
+The graph is an incremental retrieval layer over cards: cards stay authoritative and the graph can be rebuilt at any time.
+
+### `memory.graph_search(...)`
+
+Purpose:
+
+- relation-aware retrieval over the knowledge graph
+
+Retrieval pipeline:
+
+- dense (QWEN embedding) + BM25 -> RRF fusion -> anchor nodes
+- BFS subgraph expansion (1-2 hops)
+- QWEN re-rank -> contradicts penalty + time decay -> top-k
+
+Use it:
+
+- for discovery chains, evolution and contradiction links, and known failure patterns
+- before repeating a route that previously failed
+
+Node embeddings are cached in `embeddings.json`; nodes without a cached embedding are embedded on demand during the first search.
+
+### `memory.classify_failure(...)`
+
+Purpose:
+
+- classify a failed experiment via QWEN and record it in the knowledge graph
+
+Categories:
+
+- `implementation_bug` / `timeout` / `hypothesis_invalid` / `marginal` / `unexpected`
+
+Behavior:
+
+- an experiment node is always recorded with the failure category
+- `hypothesis_invalid` marks the idea `dead_end` and links a failure node via `fails_with`
+- other categories stay at the episode level and do not create knowledge-layer failure nodes
+
 ## 3. Artifact versus memory
 
 Write both only when they serve different roles.

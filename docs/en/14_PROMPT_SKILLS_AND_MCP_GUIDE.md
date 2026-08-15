@@ -414,6 +414,9 @@ Current built-in tools:
 - `memory.search(...)`
 - `memory.list_recent(...)`
 - `memory.promote_to_global(...)`
+- `memory.graph_sync(...)`
+- `memory.graph_search(...)`
+- `memory.classify_failure(...)`
 
 Use `memory` when the output should be remembered and reused later.
 
