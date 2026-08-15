@@ -11,6 +11,7 @@ from ..config import ConfigManager
 
 DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 DEFAULT_MODEL = "qwen-plus"
+DEFAULT_TEMPERATURE = 0.2
 DEFAULT_TIMEOUT_SECONDS = 120.0
 
 
@@ -141,17 +142,25 @@ class QwenClient:
             or DEFAULT_BASE_URL
         )
         resolved_model = (
-            str(model or qwen_cfg.get("model") or DEFAULT_MODEL).strip()
+            str(
+                model
+                or qwen_cfg.get("model")
+                or os.environ.get("QWEN_MODEL")
+                or DEFAULT_MODEL
+            ).strip()
             or DEFAULT_MODEL
         )
         if resolved_model.lower() in {"inherit", "default", "qwen-default"}:
             resolved_model = DEFAULT_MODEL
         resolved_temperature = temperature
-        if resolved_temperature is None and qwen_cfg.get("temperature") is not None:
+        if resolved_temperature is None:
+            raw_temperature = qwen_cfg.get("temperature")
             try:
-                resolved_temperature = float(qwen_cfg["temperature"])
+                resolved_temperature = (
+                    float(raw_temperature) if raw_temperature is not None else DEFAULT_TEMPERATURE
+                )
             except (TypeError, ValueError):
-                resolved_temperature = None
+                resolved_temperature = DEFAULT_TEMPERATURE
         return resolved_key, resolved_base, resolved_model, resolved_temperature
 
     @staticmethod
@@ -160,5 +169,5 @@ class QwenClient:
             runners = ConfigManager(home).load_runners_config()
         except Exception:
             runners = {}
-        qwen_cfg = ((runners or {}).get("runners") or {}).get("qwen") or {}
+        qwen_cfg = (runners or {}).get("qwen") or {}
         return qwen_cfg if isinstance(qwen_cfg, dict) else {}

@@ -7,9 +7,11 @@ import pytest
 from deepscientist.memory.qwen import (
     DEFAULT_BASE_URL,
     DEFAULT_MODEL,
+    DEFAULT_TEMPERATURE,
     QwenClient,
     parse_json_object,
 )
+from deepscientist.shared import write_yaml
 
 
 def test_parse_json_object_tolerates_code_fences() -> None:
@@ -41,10 +43,41 @@ def test_qwen_client_resolves_settings_from_env(
 def test_qwen_client_falls_back_to_defaults(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("QWEN_API_KEY", raising=False)
     monkeypatch.delenv("QWEN_BASE_URL", raising=False)
+    monkeypatch.delenv("QWEN_MODEL", raising=False)
     client = QwenClient(tmp_path)
     assert client.api_key == ""
     assert client.base_url == DEFAULT_BASE_URL
     assert client.model == DEFAULT_MODEL
+    assert client.temperature == DEFAULT_TEMPERATURE
+
+
+def test_qwen_client_resolves_model_from_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("QWEN_MODEL", "qwen-turbo")
+    client = QwenClient(tmp_path)
+    assert client.model == "qwen-turbo"
+
+
+def test_qwen_client_resolves_settings_from_runners_yaml(tmp_path: Path) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    write_yaml(
+        config_dir / "runners.yaml",
+        {
+            "qwen": {
+                "env": {"QWEN_API_KEY": "cfg-key"},
+                "base_url": "https://config.invalid/v1",
+                "model": "qwen-max",
+                "temperature": 0.7,
+            }
+        },
+    )
+    client = QwenClient(tmp_path)
+    assert client.api_key == "cfg-key"
+    assert client.base_url == "https://config.invalid/v1"
+    assert client.model == "qwen-max"
+    assert client.temperature == 0.7
 
 
 def test_qwen_client_chat_requires_api_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
