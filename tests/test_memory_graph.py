@@ -15,6 +15,16 @@ from deepscientist.memory.graph import (
 from deepscientist.memory.service import MemoryService
 
 
+class FakeQwenClient:
+    def __init__(self, response: str) -> None:
+        self.response = response
+        self.calls: list[dict] = []
+
+    def chat(self, system: str, user: str, *, json_mode: bool = True) -> str:
+        self.calls.append({"system": system, "user": user, "json_mode": json_mode})
+        return self.response
+
+
 def _card(node_id: str, kind: str, title: str, **meta: object) -> dict:
     metadata = {
         "id": node_id,
@@ -291,3 +301,126 @@ def test_sync_scope_end_to_end(tmp_path: Path) -> None:
     assert (quest_root / "memory" / GRAPH_FILENAME).exists()
     store = service.open_graph(scope="quest", quest_root=quest_root)
     assert {node["type"] for node in store.nodes()} == {"idea", "failure"}
+
+
+def test_classify_failure_returns_structured_category(tmp_path: Path) -> None:
+    service = MemoryGraphService(tmp_path)
+    fake = FakeQwenClient(
+        '{"category": "hypothesis_invalid", "reason": "t-distribution does not help"}'
+    )
+
+    result = service.classify_failure(
+        idea_summary="Use t-distribution instead of Gaussian",
+        experiment_id="exp-001",
+        error="AUROC did not improve",
+        log_tail="loss diverged",
+        llm=fake,
+    )
+
+    assert result == {
+        "category": "hypothesis_invalid",
+        "reason": "t-distribution does not help",
+    }
+    assert len(fake.calls) == 1
+    assert fake.calls[0]["json_mode"] is True
+    assert "Experiment target (idea): Use t-distribution instead of Gaussian" in fake.calls[0]["user"]
+
+
+def test_classify_failure_rejects_unknown_category(tmp_path: Path) -> None:
+    service = MemoryGraphService(tmp_path)
+    fake = FakeQwenClient('{"category": "mystery", "reason": "?"}')
+    with pytest.raises(ValueError, match="Unknown failure category"):
+        service.classify_failure(
+            idea_summary="Idea",
+            experiment_id="exp-002",
+            llm=fake,
+        )
+
+
+def test_record_failure_hypothesis_invalid_marks_idea_dead_end(tmp_path: Path) -> None:
+    quest_root = tmp_path / "quests" / "q1"
+    store = GraphStore(quest_root / "memory")
+    idea_id = store.add_node(node_type="idea", summary="Use t-distribution")
+    store.save()
+
+    service = MemoryGraphService(tmp_path)
+    changes = service.record_failure(
+        scope="quest",
+        quest_root=quest_root,
+        idea_id=idea_id,
+        experiment_id="exp-001",
+        summary="Use t-distribution instead of Gaussian",
+        error="AUROC 0.51 vs 0.80 baseline",
+        log_tail="loss diverged",
+        category="hypothesis_invalid",
+        reason="no gain over baseline",
+    )
+
+    assert changes["category"] == "hypothesis_invalid"
+    assert changes["idea_dead_end"] is True
+    assert changes["implements_linked"] is True
+    assert changes["failure_node_id"].startswith("failure-")
+
+    reloaded = GraphStore(quest_root / "memory").load()
+    assert reloaded.get_node(idea_id)["status"] == "dead_end"
+    experiment = reloaded.get_node("exp-001")
+    assert experiment["type"] == "experiment"
+    assert experiment["status"] == "failed"
+    assert experiment["failure_category"] == "hypothesis_invalid"
+    assert reloaded.graph[idea_id]["exp-001"]["type"] == "implements"
+    failure = reloaded.get_node(changes["failure_node_id"])
+    assert failure["type"] == "failure"
+    assert failure["status"] == "confirmed"
+    assert reloaded.graph[idea_id][changes["failure_node_id"]]["type"] == "fails_with"
+
+
+def test_record_failure_implementation_bug_stays_at_episode_level(tmp_path: Path) -> None:
+    quest_root = tmp_path / "quests" / "q1"
+    store = GraphStore(quest_root / "memory")
+    idea_id = store.add_node(node_type="idea", summary="Use t-distribution")
+    store.save()
+
+    service = MemoryGraphService(tmp_path)
+    changes = service.record_failure(
+        scope="quest",
+        quest_root=quest_root,
+        idea_id=idea_id,
+        experiment_id="exp-002",
+        summary="Use t-distribution",
+        error="ImportError: numpy missing",
+        category="implementation_bug",
+    )
+
+    assert changes["category"] == "implementation_bug"
+    assert changes["idea_dead_end"] is False
+    assert changes["failure_node_id"] is None
+
+    reloaded = GraphStore(quest_root / "memory").load()
+    assert reloaded.get_node(idea_id)["status"] == "active"
+    assert reloaded.get_node("exp-002")["failure_category"] == "implementation_bug"
+    assert [node["type"] for node in reloaded.nodes()] == ["experiment", "idea"]
+
+
+def test_record_failure_auto_classifies_when_category_missing(tmp_path: Path) -> None:
+    quest_root = tmp_path / "quests" / "q1"
+    store = GraphStore(quest_root / "memory")
+    idea_id = store.add_node(node_type="idea", summary="Use t-distribution")
+    store.save()
+
+    fake = FakeQwenClient('{"category": "marginal", "reason": "small but inconsistent gain"}')
+    service = MemoryGraphService(tmp_path)
+    changes = service.record_failure(
+        scope="quest",
+        quest_root=quest_root,
+        idea_id=idea_id,
+        experiment_id="exp-003",
+        summary="Use t-distribution",
+        error="AUROC 0.82 vs 0.80",
+        llm=fake,
+    )
+
+    assert changes["category"] == "marginal"
+    assert changes["reason"] == "small but inconsistent gain"
+    reloaded = GraphStore(quest_root / "memory").load()
+    assert reloaded.get_node("exp-003")["failure_category"] == "marginal"
+    assert reloaded.get_node(idea_id)["status"] == "active"

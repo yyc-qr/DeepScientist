@@ -7,13 +7,32 @@ from typing import Any, Iterable
 import networkx as nx
 
 from ..shared import ensure_dir, generate_id, read_json, utc_now, write_json
+from .qwen import QwenClient, parse_json_object
 from .service import MemoryService
 
 NODE_TYPES = ("idea", "experiment", "method", "failure")
 EDGE_TYPES = ("implements", "validates", "evolves_into", "contradicts", "fails_with")
+FAILURE_CATEGORIES = (
+    "implementation_bug",
+    "timeout",
+    "hypothesis_invalid",
+    "marginal",
+    "unexpected",
+)
 
 GRAPH_FILENAME = "knowledge_graph.gml"
 EMBEDDINGS_FILENAME = "embeddings.json"
+
+CLASSIFY_FAILURE_SYSTEM_PROMPT = (
+    "You classify failed research experiments for an AI Scientist memory system. "
+    "Reply with a JSON object only: {\"category\": \"...\", \"reason\": \"...\"}.\n"
+    "Categories:\n"
+    "- implementation_bug: code or environment error; fix and retry\n"
+    "- timeout: run timeout or out-of-memory; retry with smaller settings\n"
+    "- hypothesis_invalid: the hypothesis itself does not hold; record permanently\n"
+    "- marginal: positive signal but not enough to beat the baseline\n"
+    "- unexpected: main task failed but an unexpected positive signal appeared\n"
+)
 
 _CARD_KIND_TO_NODE_TYPE = {
     "idea": "idea",
@@ -366,3 +385,133 @@ class MemoryGraphService:
         result = store.sync_from_cards(full_cards, rebuild=rebuild)
         store.save()
         return result
+
+    def classify_failure(
+        self,
+        *,
+        idea_summary: str,
+        experiment_id: str,
+        error: str = "",
+        log_tail: str = "",
+        llm: Any | None = None,
+    ) -> dict[str, Any]:
+        """Ask QWEN to classify an experiment failure into one of five categories."""
+        client = llm or self._default_llm()
+        user = (
+            "Experiment target (idea): " + (idea_summary or "").strip() + "\n"
+            "Experiment id: " + (experiment_id or "").strip() + "\n"
+            "Error message: " + (error or "").strip() + "\n"
+            "Log tail: " + (log_tail or "").strip() + "\n\n"
+            "Classify the failure category and give a one-sentence reason."
+        )
+        raw = client.chat(
+            system=CLASSIFY_FAILURE_SYSTEM_PROMPT,
+            user=user,
+            json_mode=True,
+        )
+        payload = parse_json_object(raw)
+        category = str(payload.get("category") or "").strip().lower()
+        if category not in FAILURE_CATEGORIES:
+            raise ValueError(
+                f"Unknown failure category `{category}`. "
+                f"Available: {', '.join(FAILURE_CATEGORIES)}."
+            )
+        return {
+            "category": category,
+            "reason": str(payload.get("reason") or "").strip(),
+        }
+
+    def record_failure(
+        self,
+        *,
+        scope: str = "quest",
+        quest_root: Path | None = None,
+        idea_id: str,
+        experiment_id: str,
+        summary: str,
+        error: str = "",
+        log_tail: str = "",
+        log_path: str | None = None,
+        category: str | None = None,
+        reason: str = "",
+        failure_id: str | None = None,
+        llm: Any | None = None,
+    ) -> dict[str, Any]:
+        """Record a failed experiment in the graph.
+
+        The experiment node is the episode-level evidence record. Only a
+        ``hypothesis_invalid`` failure creates a Failure node (knowledge
+        layer), marks the idea ``dead_end``, and links it via ``fails_with``;
+        other categories such as ``implementation_bug`` stay at the episode
+        level and do not pollute the knowledge layer.
+        """
+        root = self._root_for(scope, quest_root)
+        store = GraphStore(root).load()
+
+        resolved_category = category
+        resolved_reason = reason
+        if resolved_category is None:
+            classified = self.classify_failure(
+                idea_summary=summary,
+                experiment_id=experiment_id,
+                error=error,
+                log_tail=log_tail,
+                llm=llm,
+            )
+            resolved_category = classified["category"]
+            resolved_reason = classified["reason"]
+        if resolved_category not in FAILURE_CATEGORIES:
+            raise ValueError(
+                f"Unknown failure category `{resolved_category}`. "
+                f"Available: {', '.join(FAILURE_CATEGORIES)}."
+            )
+
+        experiment_attrs: dict[str, Any] = {
+            "status": "failed",
+            "failure_category": resolved_category,
+            "reason": resolved_reason,
+        }
+        if error:
+            experiment_attrs["error"] = error
+        if log_path:
+            experiment_attrs["log_path"] = log_path
+        experiment_node_id = store.add_node(
+            node_id=experiment_id,
+            node_type="experiment",
+            summary=summary,
+            **experiment_attrs,
+        )
+
+        changes: dict[str, Any] = {
+            "category": resolved_category,
+            "reason": resolved_reason,
+            "experiment_node_id": experiment_node_id,
+            "idea_dead_end": False,
+            "failure_node_id": None,
+        }
+        if idea_id in store.graph:
+            store.add_edge(source=idea_id, target=experiment_node_id, edge_type="implements")
+            changes["implements_linked"] = True
+        else:
+            changes["implements_linked"] = False
+            changes["missing_idea"] = idea_id
+
+        if resolved_category == "hypothesis_invalid":
+            resolved_failure_id = str(failure_id or f"failure-{idea_id or experiment_id}")
+            store.add_node(
+                node_id=resolved_failure_id,
+                node_type="failure",
+                summary=f"Hypothesis invalid: {summary}",
+                status="confirmed",
+            )
+            changes["failure_node_id"] = resolved_failure_id
+            if idea_id in store.graph:
+                store.set_status(idea_id, "dead_end")
+                store.add_edge(source=idea_id, target=resolved_failure_id, edge_type="fails_with")
+                changes["idea_dead_end"] = True
+
+        store.save()
+        return changes
+
+    def _default_llm(self) -> Any:
+        return QwenClient(self.home)
