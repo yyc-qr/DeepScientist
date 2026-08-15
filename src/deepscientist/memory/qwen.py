@@ -11,6 +11,7 @@ from ..config import ConfigManager
 
 DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 DEFAULT_MODEL = "qwen-plus"
+DEFAULT_EMBEDDING_MODEL = "text-embedding-v4"
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_TIMEOUT_SECONDS = 120.0
 
@@ -54,6 +55,7 @@ class QwenClient:
         api_key: str | None = None,
         base_url: str | None = None,
         model: str | None = None,
+        embedding_model: str | None = None,
         temperature: float | None = None,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     ) -> None:
@@ -62,9 +64,16 @@ class QwenClient:
             api_key=api_key,
             base_url=base_url,
             model=model,
+            embedding_model=embedding_model,
             temperature=temperature,
         )
-        self.api_key, self.base_url, self.model, self.temperature = resolved
+        (
+            self.api_key,
+            self.base_url,
+            self.model,
+            self.embedding_model,
+            self.temperature,
+        ) = resolved
         self.base_url = self.base_url.rstrip("/")
         self.timeout_seconds = float(timeout_seconds or DEFAULT_TIMEOUT_SECONDS)
 
@@ -90,6 +99,35 @@ class QwenClient:
         except (KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(f"Unexpected Qwen chat response: {str(data)[:500]}") from exc
         return str(content or "").strip()
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed a list of texts and return their vectors in input order."""
+        if not self.api_key:
+            raise ValueError(
+                "QWEN_API_KEY is not set. Add it to `runners.qwen.env` in "
+                "runners.yaml or set the QWEN_API_KEY environment variable."
+            )
+        normalized_texts = [str(text or "") for text in texts]
+        payload: dict[str, Any] = {
+            "model": self.embedding_model,
+            "input": normalized_texts,
+        }
+        data = self._post("/embeddings", payload)
+        items = data.get("data") or []
+        if not isinstance(items, list):
+            raise RuntimeError(f"Unexpected Qwen embedding response: {str(data)[:500]}")
+        items = sorted(items, key=lambda item: int(item.get("index", 0)))
+        vectors: list[list[float]] = []
+        for item in items:
+            vector = item.get("embedding")
+            if not isinstance(vector, list):
+                raise RuntimeError(f"Unexpected Qwen embedding response: {str(data)[:500]}")
+            vectors.append([float(value) for value in vector])
+        if len(vectors) != len(normalized_texts):
+            raise RuntimeError(
+                f"Qwen embedding count mismatch: expected {len(normalized_texts)}, got {len(vectors)}."
+            )
+        return vectors
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8")
@@ -123,8 +161,9 @@ class QwenClient:
         api_key: str | None,
         base_url: str | None,
         model: str | None,
+        embedding_model: str | None,
         temperature: float | None,
-    ) -> tuple[str, str, str, float | None]:
+    ) -> tuple[str, str, str, str, float | None]:
         qwen_cfg = cls._load_qwen_config(home)
         env = qwen_cfg.get("env") if isinstance(qwen_cfg.get("env"), dict) else {}
         resolved_key = str(
@@ -152,6 +191,15 @@ class QwenClient:
         )
         if resolved_model.lower() in {"inherit", "default", "qwen-default"}:
             resolved_model = DEFAULT_MODEL
+        resolved_embedding_model = (
+            str(
+                embedding_model
+                or qwen_cfg.get("embedding_model")
+                or os.environ.get("QWEN_EMBEDDING_MODEL")
+                or DEFAULT_EMBEDDING_MODEL
+            ).strip()
+            or DEFAULT_EMBEDDING_MODEL
+        )
         resolved_temperature = temperature
         if resolved_temperature is None:
             raw_temperature = qwen_cfg.get("temperature")
@@ -161,7 +209,13 @@ class QwenClient:
                 )
             except (TypeError, ValueError):
                 resolved_temperature = DEFAULT_TEMPERATURE
-        return resolved_key, resolved_base, resolved_model, resolved_temperature
+        return (
+            resolved_key,
+            resolved_base,
+            resolved_model,
+            resolved_embedding_model,
+            resolved_temperature,
+        )
 
     @staticmethod
     def _load_qwen_config(home: Path) -> dict[str, Any]:

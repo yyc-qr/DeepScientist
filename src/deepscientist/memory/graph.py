@@ -8,6 +8,13 @@ import networkx as nx
 
 from ..shared import ensure_dir, generate_id, read_json, utc_now, write_json
 from .qwen import QwenClient, parse_json_object
+from .retrieval import (
+    bm25_scores,
+    cosine_similarity,
+    expand_subgraph,
+    reciprocal_rank_fusion,
+    time_decay_factor,
+)
 from .service import MemoryService
 
 NODE_TYPES = ("idea", "experiment", "method", "failure")
@@ -50,6 +57,12 @@ LINK_DISCOVERY_SYSTEM_PROMPT = (
     "- validates: an experiment validates a method\n"
     "- fails_with: an idea failed because of a known failure pattern\n"
     "Only reference node ids that appear in the provided node list."
+)
+
+RERANK_SYSTEM_PROMPT = (
+    "You rank knowledge graph nodes by relevance to a research query. "
+    "Reply with a JSON object only: {\"ids\": [\"node id\", ...]} ordered from "
+    "most to least relevant. Only reference node ids from the candidate list."
 )
 
 _CARD_KIND_TO_NODE_TYPE = {
@@ -524,6 +537,130 @@ class MemoryGraphService:
             "edges_added": len(edges),
             "edges": edges,
             "skipped": skipped,
+        }
+
+    def hybrid_search(
+        self,
+        query: str,
+        *,
+        scope: str = "quest",
+        quest_root: Path | None = None,
+        k: int = 5,
+        anchor_k: int = 10,
+        max_hops: int = 2,
+        llm: Any | None = None,
+    ) -> dict[str, Any]:
+        """Hybrid graph retrieval: dense + BM25, RRF, BFS, LLM re-rank.
+
+        Pipeline: Dense (QWEN embedding) + BM25 -> RRF fusion -> anchor nodes ->
+        BFS subgraph expansion -> QWEN re-rank -> contradicts penalty and time
+        decay -> top-k items. Nodes without cached embeddings are embedded on
+        demand and persisted in the embedding cache.
+        """
+        root = self._root_for(scope, quest_root)
+        store = GraphStore(root).load()
+        normalized_query = str(query or "").strip()
+        if not store.graph or not normalized_query:
+            return {
+                "query": normalized_query,
+                "count": 0,
+                "items": [],
+                "anchors": [],
+                "subgraph_size": 0,
+            }
+
+        client = llm or self._default_llm()
+        nodes = store.nodes()
+        node_ids = [node["id"] for node in nodes]
+        summaries = [node["summary"] for node in nodes]
+
+        missing = [node for node in nodes if store.get_embedding(node["id"]) is None]
+        if missing:
+            vectors = client.embed([node["summary"] for node in missing])
+            for node, vector in zip(missing, vectors):
+                store.set_embedding(node["id"], vector)
+            store.save()
+
+        query_embedding = client.embed([normalized_query])[0]
+        dense_ranked = sorted(
+            node_ids,
+            key=lambda node_id: cosine_similarity(query_embedding, store.get_embedding(node_id)),
+            reverse=True,
+        )
+        bm25 = bm25_scores(summaries, normalized_query)
+        bm25_ranked = [
+            node_id
+            for node_id, _score in sorted(
+                zip(node_ids, bm25),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+        ]
+
+        anchors = reciprocal_rank_fusion([dense_ranked, bm25_ranked])[
+            : max(1, int(anchor_k or 1))
+        ]
+        subgraph_ids = expand_subgraph(store.graph, anchors, max_hops=max_hops)
+        candidates = list(dict.fromkeys([*anchors, *subgraph_ids]))
+
+        candidate_lines = "\n".join(
+            f"- {node_id} [{store.get_node(node_id)['type']}] "
+            f"{store.get_node(node_id)['summary']}"
+            for node_id in candidates
+        )
+        user = (
+            f"Query: {normalized_query}\n"
+            "Candidate nodes:\n"
+            f"{candidate_lines}\n\n"
+            "Return the node ids most relevant to the query, "
+            "ordered from most to least relevant."
+        )
+        raw = client.chat(
+            system=RERANK_SYSTEM_PROMPT,
+            user=user,
+            json_mode=True,
+        )
+        payload = parse_json_object(raw)
+        reranked = [
+            str(item).strip()
+            for item in (payload.get("ids") or [])
+            if str(item).strip()
+        ]
+        reranked = [node_id for node_id in reranked if node_id in store.graph]
+
+        scored: list[tuple[str, float]] = []
+        for rank, node_id in enumerate(reranked):
+            score = 1.0 / (rank + 1)
+            for _source, _target, edge_data in store.graph.in_edges(node_id, data=True):
+                if edge_data.get("type") == "contradicts":
+                    score *= 0.2
+                    break
+            node = store.get_node(node_id)
+            updated_at = node.get("updated_at") or node.get("created_at")
+            score *= time_decay_factor(updated_at)
+            scored.append((node_id, score))
+        scored.sort(key=lambda item: item[1], reverse=True)
+        scored = scored[: max(1, int(k or 1))]
+
+        items: list[dict[str, Any]] = []
+        for node_id, score in scored:
+            node = store.get_node(node_id)
+            items.append(
+                {
+                    "id": node_id,
+                    "type": node["type"],
+                    "summary": node["summary"],
+                    "score": round(score, 6),
+                    "path": node.get("card_path"),
+                    "status": node.get("status"),
+                }
+            )
+        return {
+            "query": normalized_query,
+            "count": len(items),
+            "items": items,
+            "anchors": anchors,
+            "subgraph_size": len(candidates),
         }
 
     def record_failure(
