@@ -92,6 +92,25 @@ memory.search(query="metric wiring mismatch", scope="quest", kind="episodes", li
 memory.search(query="baseline novelty constraints", scope="both", kind="ideas", limit=6)
 ```
 
+`memory.search` 还支持先结构过滤、再词法排序。Memory 卡片的 frontmatter 可以记录
+`task_family`、`stage`、`mechanism_family`、`failure_mode`、`metric_id`、`outcome`、
+`metric_delta`、`candidate_id`、`evidence_paths`，因此成功经验和失败经验都能稳定检索，
+不再依赖某一句独特文本：
+
+```text
+memory.search(
+  query="adapter metric",
+  scope="quest",
+  kind="episodes",
+  filters={"stage": "experiment", "outcome": "failure", "metric_id": "accuracy"},
+  limit=5,
+)
+```
+
+如果调用方已经有本地向量，也可以传入 `query_embedding=[...]`；卡片带有 `embedding`
+时会把 cosine 相似度与词法分数合并。该路径不需要模型或 embedding 服务，缺少向量时自动
+退化为纯词法检索。
+
 ### `memory.read(...)`
 
 用途：
@@ -260,7 +279,10 @@ bash_exec.bash_exec(mode="await", id="<bash_id>", wait_timeout_seconds=1800)
 
 ## 7. 通过文件系统做跨 quest recall
 
-因为 memory card 默认是 quest-scoped，`memory.search` 也是 substring-only，所以跨 quest 的稳定通道是文件系统，而不是把所有历史都塞进 card index。这个通道只有在 runtime prompt 明确写出 `cross_quest_recall_enabled: true` 时可用；对应配置是 `memory.read_visibility_mode = shared_across_quests`。
+因为 memory card 默认是 quest-scoped，`memory.search` 会先做结构过滤，再要求完整短语或全部
+查询词命中，跨 quest 的稳定通道仍然是文件系统，而不是把所有历史都塞进 card index。这个
+通道只有在 runtime prompt 明确写出 `cross_quest_recall_enabled: true` 时可用；对应配置是
+`memory.read_visibility_mode = shared_across_quests`。
 
 启用时，`idea` 以及其他确实需要 prior-quest context 的 stage 可以：
 

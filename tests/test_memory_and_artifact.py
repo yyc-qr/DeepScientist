@@ -7,8 +7,10 @@ from typing import Any
 from urllib.error import HTTPError
 
 import pytest
+import deepscientist.memory.service as memory_service_module
 
 from deepscientist.artifact import ArtifactService
+from deepscientist.artifact.candidate_graph import project_candidate_graph
 from deepscientist.artifact.metrics import MetricContractValidationError
 from deepscientist.connector.weixin_support import remember_weixin_context_token
 from deepscientist.config import ConfigManager
@@ -738,6 +740,133 @@ def test_memory_list_recent_and_search_prefer_latest_updates(temp_home: Path) ->
     assert [item["title"] for item in search] == [newer["title"], older["title"]]
 
 
+def test_memory_structured_retrieval_filters_failures_and_scores_terms(
+    temp_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create("structured memory retrieval quest")
+    quest_root = Path(quest["quest_root"])
+    memory = MemoryService(temp_home)
+
+    memory.write_card(
+        scope="quest",
+        kind="episodes",
+        title="Adapter metric failure",
+        body="The adapter metric contract failed because the evaluator used the wrong split.",
+        quest_root=quest_root,
+        quest_id=quest["quest_id"],
+        metadata={
+            "task_family": "classification",
+            "stage": "experiment",
+            "mechanism_family": "adapter",
+            "failure_mode": "metric_contract",
+            "metric_id": "accuracy",
+            "outcome": "failure",
+            "metric_delta": -0.04,
+            "candidate_id": "cand-failure",
+            "evidence_paths": ["experiments/run-1/RESULT.json"],
+        },
+    )
+    memory.write_card(
+        scope="quest",
+        kind="knowledge",
+        title="Adapter success",
+        body="The adapter improved accuracy after the metric contract was corrected.",
+        quest_root=quest_root,
+        quest_id=quest["quest_id"],
+        metadata={
+            "task_family": "classification",
+            "stage": "experiment",
+            "mechanism_family": "adapter",
+            "metric_id": "accuracy",
+            "outcome": "success",
+            "metric_delta": 0.03,
+            "candidate_id": "cand-success",
+        },
+    )
+
+    episode_index = read_jsonl(quest_root / "memory" / "episodes" / "_index.jsonl")
+    assert episode_index[-1]["stage"] == "experiment"
+    assert episode_index[-1]["outcome"] == "failure"
+    assert episode_index[-1]["candidate_id"] == "cand-failure"
+
+    body_reads: list[Path] = []
+    original_load = memory_service_module.load_markdown_document
+
+    def tracking_load(path: Path):
+        body_reads.append(path)
+        return original_load(path)
+
+    monkeypatch.setattr(memory_service_module, "load_markdown_document", tracking_load)
+    results = memory.search_structured(
+        "adapter metric",
+        scope="quest",
+        quest_root=quest_root,
+        filters={"stage": "experiment", "outcome": "failure", "metric_id": "accuracy"},
+        limit=5,
+    )
+    assert [item["title"] for item in results] == ["Adapter metric failure"]
+    assert results[0]["structured_metadata"]["candidate_id"] == "cand-failure"
+    assert results[0]["retrieval"]["mode"] == "lexical"
+    assert results[0]["retrieval"]["matched_filters"] == ["stage", "outcome", "metric_id"]
+    assert body_reads == [Path(results[0]["path"])]
+    numeric_results = memory.search_structured(
+        "adapter metric",
+        scope="quest",
+        quest_root=quest_root,
+        filters={"metric_delta": -0.04},
+    )
+    assert [item["title"] for item in numeric_results] == ["Adapter metric failure"]
+    with pytest.raises(ValueError, match="Unknown structured memory filters"):
+        memory.search_structured(
+            "adapter metric",
+            scope="quest",
+            quest_root=quest_root,
+            filters={"failue_mode": "metric_contract"},
+        )
+
+
+def test_memory_structured_retrieval_uses_optional_embedding_without_dependency(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create("hybrid memory retrieval quest")
+    quest_root = Path(quest["quest_root"])
+    memory = MemoryService(temp_home)
+
+    memory.write_card(
+        scope="quest",
+        kind="knowledge",
+        title="Lexical mismatch",
+        body="A generic optimization note.",
+        quest_root=quest_root,
+        quest_id=quest["quest_id"],
+        metadata={"task_family": "classification", "embedding": [1.0, 0.0]},
+    )
+    memory.write_card(
+        scope="quest",
+        kind="knowledge",
+        title="Vector match",
+        body="A generic optimization note.",
+        quest_root=quest_root,
+        quest_id=quest["quest_id"],
+        metadata={"task_family": "classification", "embedding": [0.0, 1.0]},
+    )
+
+    results = memory.search_structured(
+        "unseen query",
+        scope="quest",
+        quest_root=quest_root,
+        query_embedding=[0.0, 1.0],
+        limit=2,
+    )
+    assert results[0]["title"] == "Vector match"
+    assert results[0]["retrieval"]["mode"] == "hybrid"
+    assert results[0]["retrieval"]["embedding_similarity"] > results[1]["retrieval"]["embedding_similarity"]
+
+
 def test_shared_memory_visibility_reads_other_quests_but_opens_them_read_only(temp_home: Path) -> None:
     ensure_home_layout(temp_home)
     config_manager = ConfigManager(temp_home)
@@ -1462,6 +1591,18 @@ def test_get_optimization_frontier_summarizes_briefs_lines_candidates_and_mode(t
         },
         workspace_root=Path(first_line["worktree_root"]),
     )
+    artifact.record(
+        quest_root,
+        {
+            "kind": "report",
+            "status": "failed",
+            "report_type": "optimization_candidate",
+            "suppress_if_semantically_equivalent": False,
+            "summary": "Legacy candidate without a candidate id.",
+            "details": {"failure_kind": "legacy_failure"},
+        },
+        workspace_root=Path(first_line["worktree_root"]),
+    )
 
     frontier = artifact.get_optimization_frontier(quest_root)
 
@@ -1471,7 +1612,7 @@ def test_get_optimization_frontier_summarizes_briefs_lines_candidates_and_mode(t
     assert payload["best_branch"]["branch_name"] == "run/main-frontier-001"
     assert payload["best_run"]["run_id"] == "main-frontier-001"
     assert payload["candidate_backlog"]["candidate_brief_count"] == 1
-    assert payload["candidate_backlog"]["implementation_candidate_count"] == 1
+    assert payload["candidate_backlog"]["implementation_candidate_count"] == 2
     assert payload["candidate_backlog"]["active_implementation_candidate_count"] == 1
     assert payload["candidate_briefs"][0]["idea_id"] == candidate["idea_id"]
     assert payload["candidate_briefs"][0]["method_brief"] == "Keep the direction branchless until ranking is complete."
@@ -1479,10 +1620,244 @@ def test_get_optimization_frontier_summarizes_briefs_lines_candidates_and_mode(t
     assert payload["candidate_briefs"][0]["mechanism_family"] == "ranking_gate"
     assert payload["candidate_briefs"][0]["change_layer"] == "Tier1"
     assert payload["candidate_briefs"][0]["source_lens"] == "search_widening"
-    assert payload["implementation_candidates"][0]["candidate_id"] == "cand-frontier-001"
+    assert any(item["candidate_id"] == "cand-frontier-001" for item in payload["implementation_candidates"])
+    assert any(item.get("candidate_id") is None for item in payload["implementation_candidates"])
     assert payload["best_branch_recent_candidates"][0]["candidate_id"] == "cand-frontier-001"
     assert len(payload["top_branches"]) >= 2
     assert payload["recommended_next_actions"]
+
+
+def test_candidate_experiment_graph_records_lineage_and_reference_edges(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create(
+        "candidate experiment graph quest",
+        startup_contract={"need_research_paper": False},
+    )
+    quest_root = Path(quest["quest_root"])
+    artifact = ArtifactService(temp_home)
+
+    root = artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-root",
+        line_id="line-main",
+        summary="Initial candidate",
+        hypothesis="A local change improves the baseline.",
+        mechanism_family="adapter",
+        code_change_mode="stepwise",
+        status="evaluated",
+        metrics_snapshot={"primary": {"metric_id": "acc", "value": 0.81}},
+    )
+    child = artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-child",
+        line_id="line-main",
+        parent_candidate_id="cand-root",
+        reference_candidate_ids=["cand-root"],
+        summary="Child candidate",
+        hypothesis="A targeted adapter edit improves the local candidate.",
+        mechanism_family="adapter",
+        code_change_mode="diff",
+        status="evaluated",
+        metrics_snapshot={"primary": {"metric_id": "acc", "value": 0.84}},
+    )
+    fused = artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-fused",
+        line_id="line-main",
+        parent_candidate_id="cand-child",
+        fused_from_candidate_ids=["cand-root", "cand-child"],
+        summary="Fused candidate",
+        hypothesis="Combining both routes improves generalization.",
+        mechanism_family="fusion",
+        code_change_mode="diff",
+        status="proposed",
+    )
+
+    assert root["ok"] is True
+    assert child["ok"] is True
+    assert fused["ok"] is True
+    graph = artifact.get_candidate_experiment_graph(quest_root)
+    assert graph["ok"] is True
+    assert graph["node_count"] == 3
+    assert {edge["relation"] for edge in graph["edges"]} == {"parent", "reference", "fused_from"}
+    child_node = next(item for item in graph["nodes"] if item["candidate_id"] == "cand-child")
+    assert child_node["parent_candidate_id"] == "cand-root"
+    assert child_node["reference_candidate_ids"] == ["cand-root"]
+
+    updated = artifact.record_candidate_experiment(
+        quest_root,
+        mode="update",
+        candidate_id="cand-child",
+        summary="Child candidate with clarified evidence",
+    )
+    assert updated["candidate"]["status"] == "evaluated"
+    updated_graph = artifact.get_candidate_experiment_graph(quest_root)
+    updated_child = next(item for item in updated_graph["nodes"] if item["candidate_id"] == "cand-child")
+    assert updated_child["event_count"] == 2
+    assert updated_graph["event_count"] == 4
+
+    cycle = artifact.record_candidate_experiment(
+        quest_root,
+        mode="update",
+        candidate_id="cand-root",
+        parent_candidate_id="cand-child",
+        summary="Invalid cyclic root",
+    )
+    assert cycle["ok"] is False
+    assert "cycle" in cycle["errors"][0].lower()
+
+    traversal = artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand/../../../outside",
+        summary="Invalid traversal candidate",
+    )
+    assert traversal["ok"] is False
+    assert "candidate_id" in traversal["errors"][0]
+
+    duplicate = artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-child",
+        line_id="line-main",
+        summary="Duplicate candidate id",
+    )
+    assert duplicate["ok"] is False
+    assert "already exists" in duplicate["errors"][0]
+
+
+def test_main_experiment_keeps_source_candidate_trace(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create(
+        "candidate trace quest",
+        startup_contract={"need_research_paper": False},
+    )
+    quest_root = Path(quest["quest_root"])
+    artifact = ArtifactService(temp_home)
+    _confirm_local_baseline(artifact, quest_root, baseline_id="baseline-candidate-trace")
+    artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-trace",
+        line_id="line-trace",
+        summary="Candidate for main run",
+        hypothesis="The candidate should beat baseline.",
+        status="promoted",
+    )
+    artifact.submit_idea(
+        quest_root,
+        mode="create",
+        submission_mode="line",
+        title="Trace line",
+        problem="Baseline leaves headroom.",
+        hypothesis="The promoted candidate improves accuracy.",
+        mechanism="Apply the candidate change.",
+        decision_reason="Run the promoted candidate.",
+        next_target="experiment",
+    )
+
+    result = artifact.record_main_experiment(
+        quest_root,
+        run_id="trace-run-001",
+        source_candidate_id="cand-trace",
+        title="Trace run",
+        hypothesis="The candidate improves accuracy.",
+        setup="Use the confirmed baseline recipe.",
+        execution="Run the evaluator.",
+        results="Accuracy improved.",
+        conclusion="The candidate is supported.",
+        metric_rows=[{"metric_id": "acc", "value": 0.86}],
+    )
+
+    assert result["ok"] is True
+    result_payload = read_json(Path(result["result_json_path"]), {})
+    assert result_payload["source_candidate_id"] == "cand-trace"
+    run_record = result["artifact"]["record"]
+    assert run_record["source_candidate_id"] == "cand-trace"
+    graph = artifact.get_candidate_experiment_graph(quest_root)
+    assert {
+        "source": "cand-trace",
+        "target": "trace-run-001",
+        "relation": "validated_by",
+    } in graph["edges"]
+
+
+def test_candidate_graph_nodes_are_chronological_for_frontier_slicing() -> None:
+    events = [
+        {
+            "candidate_id": f"cand-{index:02d}",
+            "updated_at": f"2026-08-16T00:{index:02d}:00+00:00",
+            "event_version": 1,
+        }
+        for index in range(10)
+    ]
+    events.append(
+        {
+            "candidate_id": "aaa-newest",
+            "updated_at": "2026-08-16T01:00:00+00:00",
+            "event_version": 1,
+        }
+    )
+    graph = project_candidate_graph(events)
+    assert graph["nodes"][-1]["candidate_id"] == "aaa-newest"
+
+
+def test_optimization_frontier_exposes_candidate_graph_failure_and_fusion_statistics(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create("candidate frontier statistics quest", startup_contract={"need_research_paper": False})
+    quest_root = Path(quest["quest_root"])
+    artifact = ArtifactService(temp_home)
+
+    artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-a",
+        line_id="line-a",
+        summary="Successful adapter candidate",
+        mechanism_family="adapter",
+        status="evaluated",
+    )
+    artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-b",
+        line_id="line-b",
+        summary="Successful retrieval candidate",
+        mechanism_family="retrieval",
+        status="evaluated",
+    )
+    artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-fail-1",
+        line_id="line-a",
+        summary="Failed metric candidate one",
+        mechanism_family="adapter",
+        status="failed",
+        failure_signature="metric_contract",
+    )
+    artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-fail-2",
+        line_id="line-a",
+        summary="Failed metric candidate two",
+        mechanism_family="adapter",
+        status="smoke_failed",
+        failure_signature="metric_contract",
+    )
+
+    frontier = artifact.get_optimization_frontier(quest_root)["optimization_frontier"]
+    stats = frontier["candidate_graph_summary"]
+    assert stats["node_count"] == 4
+    assert stats["edge_count"] == 0
+    assert stats["failed_candidate_count"] == 2
+    assert stats["repeated_failure_signatures"][0]["signature"] == "metric_contract"
+    assert set(stats["stagnant_candidate_ids"]) == {"cand-fail-1", "cand-fail-2"}
+    assert stats["effective_branch_count"] >= 1.0
+    assert any(
+        set(item["mechanism_families"]) == {"adapter", "retrieval"}
+        for item in stats["fusion_opportunities"]
+    )
 
 
 def test_algorithm_first_baseline_gate_advances_into_optimize_anchor(temp_home: Path) -> None:

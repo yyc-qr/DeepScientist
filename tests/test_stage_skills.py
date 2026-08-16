@@ -272,6 +272,15 @@ def test_scout_skill_requires_memory_first_literature_report() -> None:
     assert template.exists()
 
 
+def test_optimize_skill_uses_candidate_graph_and_structured_failure_memory() -> None:
+    optimize_skill = repo_root() / "src" / "skills" / "optimize" / "SKILL.md"
+    text = optimize_skill.read_text(encoding="utf-8")
+    assert "artifact.get_candidate_experiment_graph(...)" in text
+    assert "artifact.record_candidate_experiment(...)" in text
+    assert "filters={'stage': 'experiment', 'outcome': 'failure'" in text
+    assert "candidate_graph_summary" in text
+
+
 def test_quest_creation_syncs_enabled_stage_skills(temp_home: Path) -> None:
     ensure_home_layout(temp_home)
     ConfigManager(temp_home).ensure_files()

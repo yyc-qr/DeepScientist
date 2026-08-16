@@ -417,6 +417,9 @@ DeepScientist 故意把内建 MCP 面压得很小。
 
 当输出应该被后续轮次继续复用时，用 `memory`。
 
+`memory.search(...)` 可以先按阶段、机制族、失败模式、指标、结果和 candidate id 等结构字段
+过滤，再执行词法排序或可选的本地向量排序。
+
 不要把瞬时进度消息塞到 memory 里。
 
 ### 8.2 `artifact`
@@ -455,6 +458,9 @@ artifact 名字虽然多，但本质上还是一个家族。
 
 #### D. 实验与分析生命周期
 
+- `artifact.get_optimization_frontier(...)`
+- `artifact.get_candidate_experiment_graph(...)`
+- `artifact.record_candidate_experiment(...)`
 - `artifact.record_main_experiment(...)`
 - `artifact.create_analysis_campaign(...)`
 - `artifact.get_analysis_campaign(...)`

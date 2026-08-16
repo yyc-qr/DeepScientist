@@ -417,6 +417,9 @@ Current built-in tools:
 
 Use `memory` when the output should be remembered and reused later.
 
+`memory.search(...)` can filter structured experience fields such as stage, mechanism family,
+failure mode, metric, outcome, and candidate id before lexical or optional local-vector ranking.
+
 Do not use it for transient progress chatter.
 
 ### 8.2 `artifact`
@@ -455,6 +458,9 @@ The artifact namespace is large, but it is still one family.
 
 #### D. Experiment and analysis lifecycle
 
+- `artifact.get_optimization_frontier(...)`
+- `artifact.get_candidate_experiment_graph(...)`
+- `artifact.record_candidate_experiment(...)`
 - `artifact.record_main_experiment(...)`
 - `artifact.create_analysis_campaign(...)`
 - `artifact.get_analysis_campaign(...)`

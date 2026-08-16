@@ -7,7 +7,13 @@ from typing import Any
 
 from ..config import ConfigManager
 from ..shared import append_jsonl, ensure_dir, generate_id, slugify, utc_now
-from .frontmatter import dump_markdown_document, load_markdown_document, load_markdown_document_from_text
+from .frontmatter import (
+    dump_markdown_document,
+    load_markdown_document,
+    load_markdown_document_from_text,
+    load_markdown_metadata,
+)
+from .retrieval import filter_metadata, normalize_structured_metadata, rank_cards
 
 MEMORY_KINDS = ("papers", "ideas", "decisions", "episodes", "knowledge", "templates")
 MEMORY_READ_VISIBILITY_MODES = ("independent", "shared_across_quests")
@@ -145,6 +151,7 @@ class MemoryService:
         seed.setdefault("created_at", now)
         seed["updated_at"] = now
         seed["scope"] = scope
+        seed.update(normalize_structured_metadata(seed))
         return seed
 
     def _list_cards_from_root(
@@ -156,6 +163,8 @@ class MemoryService:
         scope: str | None = None,
         source_quest_id: str | None = None,
         shared: bool = False,
+        include_body: bool = False,
+        metadata_only: bool = False,
     ) -> list[dict]:
         cards: list[dict] = []
         if not root.exists():
@@ -165,7 +174,11 @@ class MemoryService:
             if not path.is_file():
                 continue
             relative = path.relative_to(root).as_posix()
-            metadata, body = load_markdown_document(path)
+            if metadata_only:
+                metadata = load_markdown_metadata(path)
+                body = ""
+            else:
+                metadata, body = load_markdown_document(path)
             entry = {
                 "id": metadata.get("id"),
                 "title": metadata.get("title", path.stem),
@@ -181,9 +194,13 @@ class MemoryService:
                 "writable": writable,
                 "scope": scope,
                 "shared": shared,
+                "metadata": metadata,
+                "structured_metadata": normalize_structured_metadata(metadata),
             }
             if source_quest_id:
                 entry["source_quest_id"] = source_quest_id
+            if include_body:
+                entry["body"] = body
             cards.append(entry)
         return cards
 
@@ -323,22 +340,91 @@ class MemoryService:
         limit: int = 20,
         kind: str | None = None,
     ) -> list[dict]:
-        query_lower = query.lower()
-        matches: list[dict] = []
+        return self.search_structured(
+            query,
+            scope=scope,
+            quest_root=quest_root,
+            limit=limit,
+            kind=kind,
+        )
+
+    @staticmethod
+    def _searchable_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        searchable: list[dict[str, Any]] = []
+        for card in cards:
+            if "body" in card and isinstance(card.get("metadata"), dict):
+                metadata = dict(card.get("metadata") or {})
+                body = str(card.get("body") or "")
+            else:
+                path = Path(str(card.get("path") or ""))
+                try:
+                    metadata, body = load_markdown_document(path)
+                except (FileNotFoundError, OSError, ValueError):
+                    continue
+            enriched = dict(card)
+            enriched["metadata"] = metadata
+            enriched["structured_metadata"] = normalize_structured_metadata(metadata)
+            enriched["body"] = body
+            enriched["excerpt"] = body.strip().splitlines()[0] if body.strip() else ""
+            searchable.append(enriched)
+        return searchable
+
+    @staticmethod
+    def _prefilter_cards(
+        cards: list[dict[str, Any]], filters: dict[str, Any] | None
+    ) -> list[dict[str, Any]]:
+        return [
+            card
+            for card in cards
+            if filter_metadata(
+                normalize_structured_metadata(card.get("metadata") or card.get("structured_metadata")),
+                filters,
+            )[0]
+        ]
+
+    def search_structured(
+        self,
+        query: str,
+        *,
+        scope: str = "global",
+        quest_root: Path | None = None,
+        limit: int = 20,
+        kind: str | None = None,
+        filters: dict[str, Any] | None = None,
+        query_embedding: list[float] | None = None,
+    ) -> list[dict]:
         scopes = [scope]
         if scope == "both":
             scopes = ["quest", "global"]
+        candidates: list[dict[str, Any]] = []
         for resolved_scope in scopes:
             if resolved_scope == "quest" and quest_root is None:
                 continue
-            for card in self.list_cards(scope=resolved_scope, quest_root=quest_root, limit=500, kind=kind):
-                content = Path(card["path"]).read_text(encoding="utf-8").lower()
-                if query_lower in content:
-                    match = dict(card)
-                    match["scope"] = resolved_scope
-                    matches.append(match)
-        matches.sort(key=self._card_sort_key, reverse=True)
-        return matches[:limit]
+            root = self._root_for(resolved_scope, quest_root)
+            for card in self._list_cards_from_root(
+                root=root,
+                kind=kind,
+                writable=True,
+                scope=resolved_scope,
+                source_quest_id=(
+                    quest_root.name
+                    if resolved_scope == "quest" and quest_root is not None
+                    else None
+                ),
+                shared=False,
+                include_body=not bool(filters),
+                metadata_only=bool(filters),
+            ):
+                enriched = dict(card)
+                enriched["scope"] = resolved_scope
+                candidates.append(enriched)
+        return rank_cards(
+            self._searchable_cards(self._prefilter_cards(candidates, filters)),
+            query=query,
+            filters=filters,
+            limit=limit,
+            query_embedding=query_embedding,
+        )
 
     def list_visible_quest_cards(
         self,
@@ -382,14 +468,23 @@ class MemoryService:
         limit: int = 20,
         kind: str | None = None,
         include_shared: bool | None = None,
+        filters: dict[str, Any] | None = None,
+        query_embedding: list[float] | None = None,
     ) -> list[dict]:
         resolved_active_quest_id = str(active_quest_id or active_quest_root.name).strip() or active_quest_root.name
         shared_enabled = self.shared_read_enabled() if include_shared is None else bool(include_shared)
         if not shared_enabled:
-            return self.search(query, scope="quest", quest_root=active_quest_root, limit=limit, kind=kind)
+            return self.search_structured(
+                query,
+                scope="quest",
+                quest_root=active_quest_root,
+                limit=limit,
+                kind=kind,
+                filters=filters,
+                query_embedding=query_embedding,
+            )
 
-        query_lower = query.lower()
-        matches: list[dict] = []
+        candidates: list[dict[str, Any]] = []
         for quest_id, quest_root, shared in self._visible_quest_roots(
             active_quest_root=active_quest_root,
             active_quest_id=resolved_active_quest_id,
@@ -402,13 +497,26 @@ class MemoryService:
                 scope="shared_quest" if shared else "quest",
                 source_quest_id=quest_id,
                 shared=shared,
+                include_body=not bool(filters),
+                metadata_only=bool(filters),
             )
-            for card in cards:
-                content = Path(card["path"]).read_text(encoding="utf-8").lower()
-                if query_lower in content:
-                    matches.append(card)
-        matches.sort(key=lambda item: self._visible_card_sort_key(item, active_quest_id=resolved_active_quest_id))
-        return matches[:limit]
+            candidates.extend(cards)
+        ranked = rank_cards(
+            self._searchable_cards(self._prefilter_cards(candidates, filters)),
+            query=query,
+            filters=filters,
+            limit=max(limit, len(candidates)),
+            query_embedding=query_embedding,
+        )
+        ranked.sort(
+            key=lambda item: (
+                float((item.get("retrieval") or {}).get("score") or 0.0),
+                tuple(-value for value in self._visible_card_sort_key(item, active_quest_id=resolved_active_quest_id)[:2]),
+                str(item.get("path") or ""),
+            ),
+            reverse=True,
+        )
+        return ranked[:limit]
 
     def promote_to_global(
         self,
@@ -434,6 +542,8 @@ class MemoryService:
 
     @staticmethod
     def _append_index(path: Path, card_path: Path, metadata: dict[str, Any], body: str) -> None:
+        structured = normalize_structured_metadata(metadata)
+        structured.pop("embedding", None)
         append_jsonl(
             path,
             {
@@ -446,6 +556,7 @@ class MemoryService:
                 "tags": metadata.get("tags", []),
                 "updated_at": metadata.get("updated_at"),
                 "excerpt": body.strip().splitlines()[0] if body.strip() else "",
+                **structured,
             },
         )
 

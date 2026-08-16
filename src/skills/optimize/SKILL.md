@@ -64,10 +64,11 @@ Recover the current frontier, choose one optimize submode, advance one justified
 - Keep exactly one primary optimize submode active for the current meaningful pass.
 - Keep only one bottom-layer optimize move truly in progress at a time.
 - Before deciding the next route, call `artifact.get_optimization_frontier(...)` when available and use it as the primary optimization-state summary.
+- Inspect `candidate_graph_summary` for repeated failures, candidate stagnation, search concentration, and fusion opportunities; call `artifact.get_candidate_experiment_graph(...)` when node-level lineage matters.
 - Candidate briefs should use `artifact.submit_idea(..., submission_mode='candidate')`.
 - Durable lines should use `artifact.submit_idea(..., submission_mode='line')`.
 - Only promote a candidate brief into a durable line when it has enough expected value, differentiation, and execution path clarity to deserve branch/worktree state.
-- Implementation-level candidate attempts inside one durable line should use `artifact.record(... report_type='optimization_candidate' ...)`.
+- Implementation-level candidate attempts inside one durable line should use `artifact.record_candidate_experiment(...)` so parent, reference, fusion, failure, and validation lineage remain queryable.
 - Real measured line results should use `artifact.record_main_experiment(...)`.
 - All terminal work in this stage must go through `bash_exec(...)`.
 
@@ -121,7 +122,7 @@ Use these three object levels consistently:
    `artifact.submit_idea(mode='create', submission_mode='line', ...)`
    Open a real branch or worktree and make it a formal optimization path.
 3. implementation-level candidate attempt
-   `artifact.record(payload={'kind': 'report', 'report_type': 'optimization_candidate', ...})`
+   `artifact.record_candidate_experiment(...)`
    Record one within-line attempt such as one patch, one smoke candidate, one debug candidate, or one fusion candidate.
 
 Use `artifact.record(payload={'kind': 'decision', ...})` when the frontier route changes, a line is promoted, a line is stopped, or the next optimize submode is selected.
@@ -220,8 +221,8 @@ Use these reference sections as needed without copying them into chat:
 ### plateau-response-playbook.md
 
 Codegen route choices should stay explicit: stepwise generation for incremental edits, diff / patch generation for contained changes, and full rewrite only when the old surface is genuinely the blocker.
-Mandatory first-call sequence: refresh `artifact.get_optimization_frontier(...)`, recover quest state, then choose `brief`, `rank`, `seed`, `loop`, `fusion`, `debug`, or `stop`.
-Use memory.search(...) for same-line local attempt memory before repeating a known failure or reopening stale frontier assumptions.
+Mandatory first-call sequence: refresh `artifact.get_optimization_frontier(...)`, inspect `artifact.get_candidate_experiment_graph(...)` when lineage details are needed, recover quest state, then choose `brief`, `rank`, `seed`, `loop`, `fusion`, `debug`, or `stop`.
+Use `memory.search(..., filters={'stage': 'experiment', 'outcome': 'failure', ...})` for same-line failure memory before repeating a known failure or reopening stale frontier assumptions.
 
 Stall-recovery protocol: if a line stops improving, decide whether the issue is mechanism family, change-layer diversity, validation-cost-aware seed policy, validation-cost-aware loop policy, or execution noise.
 Internal submode selection should preserve a coverage contract and a distinct promotion policy for each route.

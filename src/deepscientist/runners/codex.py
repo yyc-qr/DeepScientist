@@ -71,6 +71,8 @@ _BUILTIN_MCP_TOOL_APPROVALS: dict[str, tuple[str, ...]] = {
         "get_global_status",
         "get_method_scoreboard",
         "get_optimization_frontier",
+        "get_candidate_experiment_graph",
+        "record_candidate_experiment",
         "read_quest_documents",
         "get_conversation_context",
         "get_analysis_campaign",

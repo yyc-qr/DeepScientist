@@ -984,7 +984,7 @@ def build_memory_server(context: McpContext) -> FastMCP:
     @server.tool(
         name="search",
         description=(
-            "Search memory cards by metadata or body text. "
+            "Search memory cards by structured metadata filters, then lexical score, with optional caller-supplied vectors. "
             "Use before broad literature search, retries, route decisions, or repeated debugging."
         ),
         annotations=_read_only_tool_annotations(title="Search memory cards"),
@@ -994,6 +994,8 @@ def build_memory_server(context: McpContext) -> FastMCP:
         scope: str = "quest",
         limit: int = 10,
         kind: str | None = None,
+        filters: dict[str, Any] | None = None,
+        query_embedding: list[float] | None = None,
         comment: str | dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         resolved_scope = _resolve_search_scope(context, scope)
@@ -1005,6 +1007,8 @@ def build_memory_server(context: McpContext) -> FastMCP:
                 limit=limit,
                 kind=kind,
                 include_shared=True,
+                filters=filters,
+                query_embedding=query_embedding,
             )
         elif resolved_scope == "both" and context.quest_root is not None:
             quest_items = service.search_visible_quest_cards(
@@ -1014,14 +1018,39 @@ def build_memory_server(context: McpContext) -> FastMCP:
                 limit=limit,
                 kind=kind,
                 include_shared=service.shared_read_enabled(),
+                filters=filters,
+                query_embedding=query_embedding,
             )
-            global_items = service.search(query, scope="global", limit=limit, kind=kind)
+            global_items = service.search_structured(
+                query,
+                scope="global",
+                limit=limit,
+                kind=kind,
+                filters=filters,
+                query_embedding=query_embedding,
+            )
             items = quest_items + global_items
-            items.sort(key=lambda item: service._visible_card_sort_key(item, active_quest_id=context.quest_id))
+            items.sort(
+                key=lambda item: (
+                    float((item.get("retrieval") or {}).get("score") or 0.0),
+                    -service._visible_card_sort_key(item, active_quest_id=context.quest_id)[0],
+                    service._card_timestamp(item),
+                    str(item.get("path") or ""),
+                ),
+                reverse=True,
+            )
             items = items[:limit]
         else:
             quest_root = context.quest_root if resolved_scope in {"quest", "both"} else None
-            items = service.search(query, scope=resolved_scope, quest_root=quest_root, limit=limit, kind=kind)
+            items = service.search_structured(
+                query,
+                scope=resolved_scope,
+                quest_root=quest_root,
+                limit=limit,
+                kind=kind,
+                filters=filters,
+                query_embedding=query_embedding,
+            )
         return {"ok": True, "count": len(items), "items": items}
 
     @server.tool(
@@ -1873,6 +1902,92 @@ def build_artifact_server(context: McpContext) -> FastMCP:
         )
 
     @server.tool(
+        name="get_candidate_experiment_graph",
+        description=(
+            "Read the latest candidate-experiment graph with parent, reference, fusion, and validation edges. "
+            "Use it before selecting the next optimization candidate or promoting a line."
+        ),
+        annotations=_read_only_tool_annotations(title="Get candidate experiment graph"),
+    )
+    def get_candidate_experiment_graph(
+        comment: str | dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return service.get_candidate_experiment_graph(context.require_quest_root())
+
+    @server.tool(
+        name="record_candidate_experiment",
+        description=(
+            "Record or update one implementation-level optimization candidate. "
+            "Keep parent, reference, and fusion lineage explicit without creating a Git branch for every attempt."
+        ),
+    )
+    def record_candidate_experiment(
+        candidate_id: str,
+        summary: str,
+        mode: str = "create",
+        line_id: str | None = None,
+        parent_candidate_id: str | None = None,
+        reference_candidate_ids: list[str] | None = None,
+        fused_from_candidate_ids: list[str] | None = None,
+        idea_id: str | None = None,
+        branch: str | None = None,
+        strategy: str | None = None,
+        status: str | None = None,
+        hypothesis: str | None = None,
+        mechanism_family: str | None = None,
+        change_layer: str | None = None,
+        source_lens: str | None = None,
+        change_plan: str | None = None,
+        expected_gain: str | None = None,
+        code_change_mode: str | None = None,
+        metrics_snapshot: dict[str, Any] | None = None,
+        failure_kind: str | None = None,
+        failure_signature: str | None = None,
+        compute_seconds: float | None = None,
+        linked_run_id: str | None = None,
+        evidence_paths: list[str] | None = None,
+        comment: str | dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        try:
+            return service.record_candidate_experiment(
+                context.require_quest_root(),
+                candidate_id=candidate_id,
+                summary=summary,
+                mode=mode,
+                line_id=line_id,
+                parent_candidate_id=parent_candidate_id,
+                reference_candidate_ids=reference_candidate_ids,
+                fused_from_candidate_ids=fused_from_candidate_ids,
+                idea_id=idea_id,
+                branch=branch,
+                strategy=strategy,
+                status=status,
+                hypothesis=hypothesis,
+                mechanism_family=mechanism_family,
+                change_layer=change_layer,
+                source_lens=source_lens,
+                change_plan=change_plan,
+                expected_gain=expected_gain,
+                code_change_mode=code_change_mode,
+                metrics_snapshot=metrics_snapshot,
+                failure_kind=failure_kind,
+                failure_signature=failure_signature,
+                compute_seconds=compute_seconds,
+                linked_run_id=linked_run_id,
+                evidence_paths=evidence_paths,
+            )
+        except (ValueError, FileNotFoundError, RuntimeError) as exc:
+            return finalize_artifact_tool(
+                _artifact_guided_error_payload(
+                    service,
+                    context.require_quest_root(),
+                    tool_name="record_candidate_experiment",
+                    exc=exc,
+                ),
+                tool_name="record_candidate_experiment",
+            )
+
+    @server.tool(
         name="read_quest_documents",
         description=(
             "Read durable quest documents such as brief, plan, status, summary, and active user requirements. "
@@ -1955,6 +2070,7 @@ def build_artifact_server(context: McpContext) -> FastMCP:
         baseline_id: str | None = None,
         baseline_variant_id: str | None = None,
         evaluation_summary: dict[str, Any] | None = None,
+        source_candidate_id: str | None = None,
         comment: str | dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         try:
@@ -1980,6 +2096,7 @@ def build_artifact_server(context: McpContext) -> FastMCP:
                 baseline_id=baseline_id,
                 baseline_variant_id=baseline_variant_id,
                 evaluation_summary=evaluation_summary,
+                source_candidate_id=source_candidate_id,
                 strict_metric_contract=True,
             )
         except MetricContractValidationError as exc:

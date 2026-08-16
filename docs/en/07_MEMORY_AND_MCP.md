@@ -104,6 +104,25 @@ memory.search(query="metric wiring mismatch adapter", scope="quest", kind="episo
 memory.search(query="adapter baseline novelty", scope="both", kind="ideas", limit=6)
 ```
 
+Memory search also accepts structured filters before lexical ranking. Durable cards can carry
+`task_family`, `stage`, `mechanism_family`, `failure_mode`, `metric_id`, `outcome`,
+`metric_delta`, `candidate_id`, and `evidence_paths` in frontmatter. This makes both successful
+and failed attempts addressable without relying on a distinctive phrase:
+
+```text
+memory.search(
+  query="adapter metric",
+  scope="quest",
+  kind="episodes",
+  filters={"stage": "experiment", "outcome": "failure", "metric_id": "accuracy"},
+  limit=5,
+)
+```
+
+When a caller already has local vectors, it may pass `query_embedding=[...]`. Cards with an
+`embedding` field then use cosine similarity alongside lexical score. No model or embedding
+service is required: missing vectors automatically use the lexical path.
+
 ### `memory.read(...)`
 
 Purpose:
@@ -277,7 +296,11 @@ The agent should normally follow this discipline:
 
 ## 7. Cross-quest recall via the file system
 
-Cards are quest-scoped by default and `memory.search` is substring-only, so the durable cross-quest channel is the file system rather than the card index. This channel is available only when the runtime prompt says `cross_quest_recall_enabled: true`, which corresponds to `memory.read_visibility_mode = shared_across_quests`.
+Cards are quest-scoped by default. `memory.search` first applies structured filters, then requires
+the full query phrase or all query terms for lexical matches; the durable cross-quest channel is
+still the file system rather than the card index. This channel is available only when the runtime
+prompt says `cross_quest_recall_enabled: true`, which corresponds to
+`memory.read_visibility_mode = shared_across_quests`.
 
 When enabled, `idea` and any other stage that benefits from prior-quest context may:
 

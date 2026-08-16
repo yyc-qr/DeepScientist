@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import re
 import shutil
 import threading
 import time
+from collections import Counter
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -52,6 +54,7 @@ from ..shared import (
 from ..quest import AUTONOMOUS_BLOCKING_WAIT_REASONS, QuestService
 from ..memory.frontmatter import dump_markdown_document, load_markdown_document
 from .arxiv import fetch_arxiv_metadata, read_arxiv_content
+from .candidate_graph import normalize_id_list, project_candidate_graph, validate_candidate_node
 from .charts import render_main_experiment_metric_timeline_chart
 from .guidance import build_guidance_for_record, guidance_summary
 from .metrics import (
@@ -6228,9 +6231,20 @@ class ArtifactService:
         records.sort(key=lambda item: str(item.get("updated_at") or ""))
         return records
 
-    def _optimization_candidate_reports(self, quest_root: Path) -> list[dict[str, Any]]:
+    def _optimization_candidate_events(self, quest_root: Path) -> list[dict[str, Any]]:
+        artifacts = self.quest_service._collect_artifacts(quest_root)
+        validation_links: dict[str, str] = {}
+        for item in artifacts:
+            payload = dict(item.get("payload") or {}) if isinstance(item.get("payload"), dict) else {}
+            details = dict(payload.get("details") or {}) if isinstance(payload.get("details"), dict) else {}
+            source_candidate_id = str(
+                payload.get("source_candidate_id") or details.get("source_candidate_id") or ""
+            ).strip()
+            run_id = str(payload.get("run_id") or details.get("run_id") or "").strip()
+            if source_candidate_id and run_id:
+                validation_links[source_candidate_id] = run_id
         records: list[dict[str, Any]] = []
-        for item in self.quest_service._collect_artifacts(quest_root):
+        for item in artifacts:
             payload = dict(item.get("payload") or {}) if isinstance(item.get("payload"), dict) else {}
             if not payload:
                 continue
@@ -6246,6 +6260,13 @@ class ArtifactService:
                     "artifact_id": str(payload.get("artifact_id") or payload.get("id") or "").strip() or None,
                     "candidate_id": str(payload.get("candidate_id") or details.get("candidate_id") or "").strip() or None,
                     "parent_candidate_id": str(payload.get("parent_candidate_id") or details.get("parent_candidate_id") or "").strip() or None,
+                    "reference_candidate_ids": normalize_id_list(
+                        payload.get("reference_candidate_ids") or details.get("reference_candidate_ids")
+                    ),
+                    "fused_from_candidate_ids": normalize_id_list(
+                        payload.get("fused_from_candidate_ids") or details.get("fused_from_candidate_ids")
+                    ),
+                    "line_id": str(payload.get("line_id") or details.get("line_id") or "").strip() or None,
                     "idea_id": str(payload.get("idea_id") or details.get("idea_id") or "").strip() or None,
                     "branch": str(payload.get("branch") or details.get("branch") or "").strip() or None,
                     "strategy": str(payload.get("strategy") or details.get("strategy") or "").strip() or None,
@@ -6256,15 +6277,159 @@ class ArtifactService:
                     "summary": str(payload.get("summary") or "").strip() or None,
                     "change_plan": str(payload.get("change_plan") or details.get("change_plan") or "").strip() or None,
                     "expected_gain": str(payload.get("expected_gain") or details.get("expected_gain") or "").strip() or None,
-                    "linked_run_id": str(payload.get("linked_run_id") or details.get("linked_run_id") or "").strip() or None,
+                    "linked_run_id": str(
+                        payload.get("linked_run_id")
+                        or details.get("linked_run_id")
+                        or validation_links.get(str(payload.get("candidate_id") or details.get("candidate_id") or "").strip())
+                        or ""
+                    ).strip()
+                    or None,
                     "failure_kind": str(payload.get("failure_kind") or details.get("failure_kind") or "").strip() or None,
+                    "failure_signature": str(payload.get("failure_signature") or details.get("failure_signature") or "").strip() or None,
+                    "code_change_mode": str(payload.get("code_change_mode") or details.get("code_change_mode") or "").strip() or None,
+                    "hypothesis": str(payload.get("hypothesis") or details.get("hypothesis") or "").strip() or None,
+                    "compute_seconds": payload.get("compute_seconds", details.get("compute_seconds")),
+                    "evidence_paths": normalize_id_list(payload.get("evidence_paths") or details.get("evidence_paths")),
                     "metrics_snapshot": payload.get("metrics_snapshot") or details.get("metrics_snapshot"),
+                    "event_type": str(payload.get("event_type") or details.get("event_type") or "create").strip() or "create",
+                    "event_version": int(payload.get("event_version") or details.get("event_version") or 1),
                     "updated_at": str(payload.get("updated_at") or payload.get("created_at") or "").strip() or None,
                     "artifact_path": artifact_path,
                 }
             )
         records.sort(key=lambda item: str(item.get("updated_at") or ""))
         return records
+
+    def _optimization_candidate_reports(self, quest_root: Path) -> list[dict[str, Any]]:
+        graph = project_candidate_graph(self._optimization_candidate_events(quest_root))
+        return [dict(item) for item in graph.get("nodes") or [] if isinstance(item, dict)]
+
+    def record_candidate_experiment(
+        self,
+        quest_root: Path,
+        *,
+        candidate_id: str,
+        summary: str,
+        mode: str = "create",
+        line_id: str | None = None,
+        parent_candidate_id: str | None = None,
+        reference_candidate_ids: list[str] | None = None,
+        fused_from_candidate_ids: list[str] | None = None,
+        idea_id: str | None = None,
+        branch: str | None = None,
+        strategy: str | None = None,
+        status: str | None = None,
+        hypothesis: str | None = None,
+        mechanism_family: str | None = None,
+        change_layer: str | None = None,
+        source_lens: str | None = None,
+        change_plan: str | None = None,
+        expected_gain: str | None = None,
+        code_change_mode: str | None = None,
+        metrics_snapshot: dict[str, Any] | None = None,
+        failure_kind: str | None = None,
+        failure_signature: str | None = None,
+        compute_seconds: float | None = None,
+        linked_run_id: str | None = None,
+        evidence_paths: list[str] | None = None,
+        workspace_root: Path | None = None,
+    ) -> dict[str, Any]:
+        normalized_mode = str(mode or "create").strip().lower() or "create"
+        if normalized_mode not in {"create", "update"}:
+            return {"ok": False, "errors": [f"Unknown candidate experiment mode: {normalized_mode}"], "warnings": []}
+
+        events = self._optimization_candidate_events(quest_root)
+        graph = project_candidate_graph(events)
+        existing_by_id = {
+            str(item.get("candidate_id") or "").strip(): dict(item)
+            for item in graph.get("nodes") or []
+            if isinstance(item, dict) and str(item.get("candidate_id") or "").strip()
+        }
+        normalized_id = str(candidate_id or "").strip()
+        previous_projected = existing_by_id.get(normalized_id, {}) if normalized_mode == "update" else {}
+        persistence_fields = {
+            "artifact_id",
+            "artifact_path",
+            "created_at",
+            "updated_at",
+            "event_count",
+            "event_type",
+            "event_version",
+        }
+        previous = {
+            key: value for key, value in previous_projected.items() if key not in persistence_fields
+        }
+        event_time = utc_now()
+
+        node = {
+            **previous,
+            "candidate_id": normalized_id,
+            "line_id": str(line_id or previous.get("line_id") or "").strip() or None,
+            "parent_candidate_id": str(parent_candidate_id or previous.get("parent_candidate_id") or "").strip() or None,
+            "reference_candidate_ids": normalize_id_list(
+                reference_candidate_ids if reference_candidate_ids is not None else previous.get("reference_candidate_ids")
+            ),
+            "fused_from_candidate_ids": normalize_id_list(
+                fused_from_candidate_ids if fused_from_candidate_ids is not None else previous.get("fused_from_candidate_ids")
+            ),
+            "idea_id": str(idea_id or previous.get("idea_id") or "").strip() or None,
+            "branch": str(branch or previous.get("branch") or "").strip() or None,
+            "strategy": str(strategy or previous.get("strategy") or "").strip() or None,
+            "status": str(status or previous.get("status") or "proposed").strip() or "proposed",
+            "summary": str(summary or previous.get("summary") or "").strip(),
+            "hypothesis": str(hypothesis or previous.get("hypothesis") or "").strip() or None,
+            "mechanism_family": str(mechanism_family or previous.get("mechanism_family") or "").strip() or None,
+            "change_layer": str(change_layer or previous.get("change_layer") or "").strip() or None,
+            "source_lens": str(source_lens or previous.get("source_lens") or "").strip() or None,
+            "change_plan": str(change_plan or previous.get("change_plan") or "").strip() or None,
+            "expected_gain": str(expected_gain or previous.get("expected_gain") or "").strip() or None,
+            "code_change_mode": str(code_change_mode or previous.get("code_change_mode") or "").strip().lower() or None,
+            "metrics_snapshot": metrics_snapshot if metrics_snapshot is not None else previous.get("metrics_snapshot"),
+            "failure_kind": str(failure_kind or previous.get("failure_kind") or "").strip() or None,
+            "failure_signature": str(failure_signature or previous.get("failure_signature") or "").strip() or None,
+            "compute_seconds": compute_seconds if compute_seconds is not None else previous.get("compute_seconds"),
+            "linked_run_id": str(linked_run_id or previous.get("linked_run_id") or "").strip() or None,
+            "evidence_paths": normalize_id_list(
+                evidence_paths if evidence_paths is not None else previous.get("evidence_paths")
+            ),
+            "event_type": normalized_mode,
+            "event_version": int(
+                previous_projected.get("event_count") or previous_projected.get("event_version") or 0
+            )
+            + 1,
+            "updated_at": event_time,
+        }
+        errors = validate_candidate_node(
+            node,
+            existing_ids=set(existing_by_id),
+            creating=normalized_mode == "create",
+            existing_nodes=existing_by_id,
+        )
+        if errors:
+            return {"ok": False, "errors": errors, "warnings": []}
+
+        payload = {
+            "kind": "report",
+            "report_type": "optimization_candidate",
+            "protocol_step": normalized_mode,
+            "suppress_if_semantically_equivalent": False,
+            "artifact_id": generate_id("candidate"),
+            "created_at": event_time,
+            **{key: value for key, value in node.items() if value not in (None, [], {})},
+            "details": {key: value for key, value in node.items() if value not in (None, [], {})},
+        }
+        result = self.record(
+            quest_root,
+            payload,
+            checkpoint=False,
+            workspace_root=workspace_root,
+        )
+        result["candidate"] = node
+        result["candidate_graph"] = self.get_candidate_experiment_graph(quest_root)
+        return result
+
+    def get_candidate_experiment_graph(self, quest_root: Path) -> dict[str, Any]:
+        return project_candidate_graph(self._optimization_candidate_events(quest_root))
 
     @staticmethod
     def _frontier_branch_rank(branch: dict[str, Any]) -> tuple[int, int, float, str, str]:
@@ -6300,6 +6465,93 @@ class ArtifactService:
             ),
         }
 
+    @staticmethod
+    def _candidate_graph_frontier_summary(graph: dict[str, Any]) -> dict[str, Any]:
+        nodes = [dict(item) for item in graph.get("nodes") or [] if isinstance(item, dict)]
+        failed_statuses = {"failed", "smoke_failed", "full_eval_failed", "archived"}
+        failed_nodes = [
+            item for item in nodes if str(item.get("status") or "").strip().lower() in failed_statuses
+        ]
+        failure_groups: dict[str, list[str]] = {}
+        for item in failed_nodes:
+            signature = str(item.get("failure_signature") or item.get("failure_kind") or "").strip()
+            if not signature:
+                continue
+            failure_groups.setdefault(signature, []).append(str(item.get("candidate_id") or "").strip())
+        repeated_failure_signatures = [
+            {"signature": signature, "count": len(candidate_ids), "candidate_ids": candidate_ids}
+            for signature, candidate_ids in sorted(failure_groups.items())
+            if len(candidate_ids) >= 2
+        ]
+        repeated_signatures = {item["signature"] for item in repeated_failure_signatures}
+        stagnant_candidate_ids = sorted(
+            str(item.get("candidate_id") or "").strip()
+            for item in failed_nodes
+            if str(item.get("failure_signature") or item.get("failure_kind") or "").strip() in repeated_signatures
+            or int(item.get("event_count") or 1) >= 2
+        )
+
+        branch_counts = Counter(
+            str(item.get("line_id") or item.get("branch") or "unassigned").strip() or "unassigned"
+            for item in nodes
+        )
+        total_nodes = sum(branch_counts.values())
+        entropy = 0.0
+        if total_nodes:
+            entropy = -sum(
+                (count / total_nodes) * math.log(count / total_nodes)
+                for count in branch_counts.values()
+                if count
+            )
+        successful_statuses = {"evaluated", "passed", "success", "promoted", "full_eval_passed"}
+        successful = [
+            item
+            for item in nodes
+            if str(item.get("status") or "").strip().lower() in successful_statuses
+            and str(item.get("mechanism_family") or "").strip()
+        ]
+        existing_fusions = {
+            frozenset(normalize_id_list(item.get("fused_from_candidate_ids")))
+            for item in nodes
+            if len(normalize_id_list(item.get("fused_from_candidate_ids"))) >= 2
+        }
+        fusion_opportunities: list[dict[str, Any]] = []
+        for index, left in enumerate(successful):
+            left_id = str(left.get("candidate_id") or "").strip()
+            left_family = str(left.get("mechanism_family") or "").strip()
+            for right in successful[index + 1 :]:
+                right_id = str(right.get("candidate_id") or "").strip()
+                right_family = str(right.get("mechanism_family") or "").strip()
+                if not left_id or not right_id or left_family == right_family:
+                    continue
+                if frozenset({left_id, right_id}) in existing_fusions:
+                    continue
+                fusion_opportunities.append(
+                    {
+                        "candidate_ids": [left_id, right_id],
+                        "mechanism_families": [left_family, right_family],
+                        "reason": "Successful candidates expose complementary mechanism families.",
+                    }
+                )
+                if len(fusion_opportunities) >= 8:
+                    break
+            if len(fusion_opportunities) >= 8:
+                break
+
+        return {
+            "node_count": int(graph.get("node_count") or len(nodes)),
+            "event_count": int(graph.get("event_count") or 0),
+            "edge_count": int(graph.get("edge_count") or 0),
+            "failed_candidate_count": len(failed_nodes),
+            "repeated_failure_signatures": repeated_failure_signatures,
+            "stagnant_candidate_ids": stagnant_candidate_ids,
+            "candidate_stagnation_count": len(stagnant_candidate_ids),
+            "line_candidate_counts": dict(sorted(branch_counts.items())),
+            "effective_branch_count": round(math.exp(entropy), 8) if total_nodes else 0.0,
+            "branch_entropy": round(entropy, 8),
+            "fusion_opportunities": fusion_opportunities,
+        }
+
     def get_optimization_frontier(self, quest_root: Path) -> dict[str, Any]:
         cache_key = str(quest_root.resolve())
         state = self._optimization_frontier_state(quest_root)
@@ -6312,7 +6564,22 @@ class ArtifactService:
         branches_payload = self.list_research_branches(quest_root)
         branches = [dict(item) for item in (branches_payload.get("branches") or []) if isinstance(item, dict)]
         candidate_briefs = self._idea_candidate_artifacts(quest_root)
-        implementation_candidates = self._optimization_candidate_reports(quest_root)
+        candidate_events = self._optimization_candidate_events(quest_root)
+        candidate_graph = project_candidate_graph(candidate_events)
+        implementation_candidates = [
+            dict(item) for item in candidate_graph.get("nodes") or [] if isinstance(item, dict)
+        ]
+        implementation_candidates.extend(
+            dict(item) for item in candidate_events if not str(item.get("candidate_id") or "").strip()
+        )
+        implementation_candidates.sort(
+            key=lambda item: (
+                str(item.get("updated_at") or item.get("created_at") or ""),
+                int(item.get("event_version") or 1),
+                str(item.get("artifact_path") or ""),
+            )
+        )
+        candidate_graph_summary = self._candidate_graph_frontier_summary(candidate_graph)
 
         branches.sort(key=self._frontier_branch_rank, reverse=True)
         top_branches = branches[:3]
@@ -6448,6 +6715,7 @@ class ArtifactService:
                 "implementation_candidates": implementation_candidates[-8:],
                 "best_branch_recent_candidates": best_branch_recent_candidates,
                 "candidate_backlog": candidate_backlog,
+                "candidate_graph_summary": candidate_graph_summary,
                 "stagnant_branches": stagnant_branches,
                 "fusion_candidates": fusion_candidates,
                 "recommended_next_actions": recommended_next_actions,
@@ -11632,6 +11900,7 @@ class ArtifactService:
         baseline_id: str | None = None,
         baseline_variant_id: str | None = None,
         evaluation_summary: dict[str, Any] | None = None,
+        source_candidate_id: str | None = None,
         strict_metric_contract: bool = False,
     ) -> dict[str, Any]:
         self._require_baseline_gate_open(quest_root, action="record_main_experiment")
@@ -11654,6 +11923,14 @@ class ArtifactService:
         run_identifier = str(run_id or "").strip()
         if not run_identifier:
             raise ValueError("record_main_experiment requires `run_id`.")
+        normalized_source_candidate_id = str(source_candidate_id or "").strip() or None
+        if normalized_source_candidate_id:
+            candidate_ids = {
+                str(item.get("candidate_id") or "").strip()
+                for item in self._optimization_candidate_reports(quest_root)
+            }
+            if normalized_source_candidate_id not in candidate_ids:
+                raise ValueError(f"Unknown source candidate experiment: {normalized_source_candidate_id}")
 
         active_idea_id = str(state.get("active_idea_id") or "").strip() or None
         workspace_root = self._workspace_root_for(quest_root)
@@ -11898,6 +12175,7 @@ class ArtifactService:
             "status": status,
             "verdict": verdict,
             "idea_id": active_idea_id,
+            "source_candidate_id": normalized_source_candidate_id,
             "branch": branch_name,
             "parent_branch": parent_branch,
             "worktree_root": str(workspace_root),
@@ -11947,6 +12225,7 @@ class ArtifactService:
                 "summary": summary,
                 "reason": conclusion.strip() or progress_eval.get("reason") or "Main experiment result recorded.",
                 "idea_id": active_idea_id,
+                "source_candidate_id": normalized_source_candidate_id,
                 "branch": branch_name,
                 "parent_branch": parent_branch,
                 "worktree_root": str(workspace_root),
@@ -11966,6 +12245,7 @@ class ArtifactService:
                 },
                 "details": {
                     "title": title.strip() or run_identifier,
+                    "source_candidate_id": normalized_source_candidate_id,
                     "verdict": verdict,
                     "primary_metric_id": primary_metric_id,
                     "primary_value": primary_value,

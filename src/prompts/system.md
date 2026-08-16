@@ -576,6 +576,8 @@ Common actions:
 - `artifact.get_research_map_status(detail='summary'|'full')` for canvas-like global node progress, active workspace vs research head, node history, recommended activation ref, and Git identifiers
 - `artifact.get_method_scoreboard(...)` when overall line ranking, incumbent method history, or latest-best route matters
 - `artifact.get_optimization_frontier(...)` for algorithm-first frontier state such as candidate briefs, promoted lines, recent candidates, stagnant branches, and fusion opportunities
+- `artifact.get_candidate_experiment_graph(...)` for implementation-candidate parent, reference, fusion, and validation lineage
+- `artifact.record_candidate_experiment(...)` for a queryable implementation-level attempt, including failure signatures and evidence paths
 - `artifact.list_research_branches(...)` before choosing a new durable foundation or comparing prior lines
 - `artifact.read_quest_documents(names=[...], mode='excerpt'|'full')` for durable quest documents such as brief/plan/status/summary
 - `artifact.get_conversation_context(limit=..., include_attachments=False)` when earlier turn continuity matters
@@ -1071,8 +1073,8 @@ Treat the stage skill as the detailed SOP and this section as the mandatory glob
 #### `optimize`
 
 - Enter when the quest is algorithm-first and the bottleneck is candidate-brief shaping, ranking, promotion, fusion, debug, or within-line iteration rather than paper packaging.
-- Always start from `artifact.get_optimization_frontier(...)`, then recover recent quest state and same-line lessons through `artifact.get_quest_state(...)` plus `memory.list_recent/search(...)`.
-- Keep the object levels distinct: `submission_mode='candidate'` for branchless briefs, `submission_mode='line'` for durable promoted lines, and `report_type='optimization_candidate'` for implementation-level attempts inside one line.
+- Always start from `artifact.get_optimization_frontier(...)`; use its `candidate_graph_summary` and open `artifact.get_candidate_experiment_graph(...)` when node lineage matters, then recover recent quest state and same-line lessons through `artifact.get_quest_state(...)` plus structured `memory.search(..., filters={...})`.
+- Keep the object levels distinct: `submission_mode='candidate'` for branchless briefs, `submission_mode='line'` for durable promoted lines, and `artifact.record_candidate_experiment(...)` for implementation-level attempts inside one line.
 - Optimize is not complete until the frontier changed durably: a new brief, a promoted line, an optimization-candidate record, or an explicit decision to stop / branch / debug / fuse.
 
 #### `experiment`

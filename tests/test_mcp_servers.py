@@ -163,6 +163,11 @@ def test_memory_mcp_server_tools_cover_core_flows(temp_home: Path) -> None:
                     "title": "MCP Memory Demo",
                     "body": "memory body",
                     "tags": ["mcp"],
+                    "metadata": {
+                        "task_family": "classification",
+                        "stage": "baseline",
+                        "outcome": "success",
+                    },
                 },
             )
         )
@@ -196,6 +201,52 @@ def test_memory_mcp_server_tools_cover_core_flows(temp_home: Path) -> None:
         assert search_result["ok"] is True
         assert search_result["count"] >= 1
         assert any(item["id"] == write_result["id"] for item in search_result["items"])
+
+        structured_search = _unwrap_tool_result(
+            await server.call_tool(
+                "search",
+                {
+                    "query": "memory",
+                    "scope": "quest",
+                    "filters": {"stage": "baseline", "outcome": "success"},
+                },
+            )
+        )
+        assert structured_search["count"] == 1
+        assert structured_search["items"][0]["structured_metadata"]["task_family"] == "classification"
+
+        await server.call_tool(
+            "write",
+            {
+                "kind": "knowledge",
+                "title": "Quest vector mismatch",
+                "body": "generic vector note",
+                "scope": "quest",
+                "metadata": {"embedding": [1.0, 0.0]},
+            },
+        )
+        await server.call_tool(
+            "write",
+            {
+                "kind": "knowledge",
+                "title": "Global vector match",
+                "body": "generic vector note",
+                "scope": "global",
+                "metadata": {"embedding": [0.0, 1.0]},
+            },
+        )
+        hybrid_both = _unwrap_tool_result(
+            await server.call_tool(
+                "search",
+                {
+                    "query": "unseen vector query",
+                    "scope": "both",
+                    "query_embedding": [0.0, 1.0],
+                    "limit": 1,
+                },
+            )
+        )
+        assert hybrid_both["items"][0]["title"] == "Global vector match"
 
         recent_result = _unwrap_tool_result(await server.call_tool("list_recent", {"scope": "both"}))
         assert recent_result["ok"] is True
@@ -401,6 +452,8 @@ def test_artifact_mcp_server_tools_cover_core_flows(temp_home: Path) -> None:
             "get_start_setup_context",
             "get_method_scoreboard",
             "get_optimization_frontier",
+            "get_candidate_experiment_graph",
+            "record_candidate_experiment",
             "read_quest_documents",
             "get_conversation_context",
             "get_analysis_campaign",
@@ -1762,6 +1815,60 @@ def test_artifact_mcp_get_optimization_frontier_returns_candidate_and_line_state
         assert payload["candidate_briefs"][0]["source_lens"] == "search_widening"
         assert payload["best_run"]["run_id"] == "main-mcp-frontier-001"
         assert payload["implementation_candidates"][0]["candidate_id"] == "cand-mcp-frontier-001"
+
+    asyncio.run(scenario())
+
+
+def test_artifact_mcp_candidate_experiment_graph_round_trip(temp_home: Path) -> None:
+    async def scenario() -> None:
+        ensure_home_layout(temp_home)
+        ConfigManager(temp_home).ensure_files()
+        quest = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home)).create(
+            "mcp candidate graph quest",
+            startup_contract={"need_research_paper": False},
+        )
+        quest_root = Path(quest["quest_root"])
+        context = McpContext(
+            home=temp_home,
+            quest_id=quest["quest_id"],
+            quest_root=quest_root,
+            run_id="run-mcp-candidate-graph",
+            active_anchor="optimize",
+            conversation_id="quest:test",
+            agent_role="optimize",
+            worker_id="worker-main",
+            worktree_root=None,
+            team_mode="single",
+        )
+        server = build_artifact_server(context)
+        root = _unwrap_tool_result(
+            await server.call_tool(
+                "record_candidate_experiment",
+                {
+                    "candidate_id": "cand-mcp-root",
+                    "line_id": "line-mcp",
+                    "summary": "MCP root candidate",
+                },
+            )
+        )
+        child = _unwrap_tool_result(
+            await server.call_tool(
+                "record_candidate_experiment",
+                {
+                    "candidate_id": "cand-mcp-child",
+                    "line_id": "line-mcp",
+                    "parent_candidate_id": "cand-mcp-root",
+                    "reference_candidate_ids": ["cand-mcp-root"],
+                    "summary": "MCP child candidate",
+                },
+            )
+        )
+        graph = _unwrap_tool_result(await server.call_tool("get_candidate_experiment_graph", {}))
+
+        assert root["ok"] is True
+        assert child["candidate"]["parent_candidate_id"] == "cand-mcp-root"
+        assert graph["node_count"] == 2
+        assert any(edge["relation"] == "reference" for edge in graph["edges"])
 
     asyncio.run(scenario())
 
