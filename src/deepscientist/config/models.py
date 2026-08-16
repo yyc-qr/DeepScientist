@@ -192,6 +192,22 @@ def default_runners() -> dict:
             "env": {},
             "status": "supported_experimental",
         },
+        "qwen": {
+            "enabled": False,
+            "binary": "",
+            "model": "qwen-plus",
+            "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "temperature": 0.2,
+            "env": {
+                "QWEN_API_KEY": "",
+            },
+            "retry_on_failure": True,
+            "retry_max_attempts": 4,
+            "retry_initial_backoff_sec": 10.0,
+            "retry_backoff_multiplier": 4.0,
+            "retry_max_backoff_sec": 600.0,
+            "status": "supported_experimental",
+        },
     }
 
 

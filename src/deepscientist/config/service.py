@@ -905,9 +905,13 @@ Use **Test** when the file exposes runtime dependencies.
             if not isinstance(config, dict):
                 continue
             enabled = bool(config.get("enabled", False))
+            try:
+                no_external_binary = bool(get_runner_metadata(name).no_external_binary)
+            except KeyError:
+                no_external_binary = False
             binary = str(config.get("binary") or name).strip()
             resolved_binary = resolve_runner_binary(binary, runner_name=name)
-            exists = resolved_binary is not None
+            exists = True if no_external_binary else resolved_binary is not None
             warnings: list[str] = []
             if not enabled:
                 warnings.append("Runner is disabled and was skipped.")

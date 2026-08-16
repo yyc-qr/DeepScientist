@@ -22,7 +22,7 @@ from .network import configure_runtime_proxy, urlopen_with_proxy as urlopen
 from .prompts import PromptBuilder
 from .quest import QuestService
 from .registries import BaselineRegistry
-from .runners import ClaudeRunner, CodexRunner, KimiRunner, OpenCodeRunner, RunRequest, get_runner_factory, register_builtin_runners
+from .runners import ClaudeRunner, CodexRunner, KimiRunner, OpenCodeRunner, QwenRunner, RunRequest, get_runner_factory, register_builtin_runners
 from .runtime_tools import RuntimeToolService
 from .runtime_logs import JsonlLogger
 from .shared import ensure_dir, read_json, read_yaml
@@ -394,11 +394,20 @@ def run_command(
         prompt_builder=prompt_builder,
         artifact_service=artifact_service,
     )
+    qwen_runner = QwenRunner(
+        home=home,
+        repo_root=repo_root(),
+        binary="",
+        logger=logger,
+        prompt_builder=prompt_builder,
+        artifact_service=artifact_service,
+    )
     register_builtin_runners(
         codex_runner=codex_runner,
         claude_runner=claude_runner,
         kimi_runner=kimi_runner,
         opencode_runner=opencode_runner,
+        qwen_runner=qwen_runner,
     )
     explicit_runner = _normalize_cli_runner_name(runner_override)
     candidate_runners = [explicit_runner, config.get("default_runner", "codex"), "codex"]

@@ -284,7 +284,7 @@ class DaemonApp:
         self.qwen_runner = QwenRunner(
             home=home,
             repo_root=self.repo_root,
-            binary="qwen",
+            binary="",
             logger=self.logger,
             prompt_builder=self.prompt_builder,
             artifact_service=self.artifact_service,
@@ -300,7 +300,7 @@ class DaemonApp:
         register_builtin_channels(home=home, connectors_config=self.connectors_config)
         self.runners = {
             name: self._create_runner(name)
-            for name in ("codex", "claude", "kimi", "opencode")
+            for name in ("codex", "claude", "kimi", "opencode", "qwen")
         }
         self.channels = {name: self._create_channel(name) for name in list_channel_names()}
         self.sessions = SessionStore()

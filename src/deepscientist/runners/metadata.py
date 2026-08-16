@@ -12,6 +12,7 @@ class RunnerMetadata:
     quest_dotdir: str
     status_note: str = ""
     supports_reasoning_effort: bool = False
+    no_external_binary: bool = False
 
 
 _RUNNER_METADATA: dict[str, RunnerMetadata] = {
@@ -51,6 +52,7 @@ _RUNNER_METADATA: dict[str, RunnerMetadata] = {
         default_config_dir="",
         quest_dotdir=".qwen",
         status_note="Custom runner via 阿里云百炼 API",
+        no_external_binary=True,
     ),
 }
 
