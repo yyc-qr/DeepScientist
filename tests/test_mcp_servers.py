@@ -444,6 +444,8 @@ def test_artifact_mcp_server_tools_cover_core_flows(temp_home: Path) -> None:
             "validate_manuscript_coverage",
             "validate_academic_outline",
             "validate_manuscript_language",
+            "judge_paper",
+            "get_latest_paper_judge",
             "compile_outline_to_writing_plan",
             "get_quest_state",
             "get_global_status",

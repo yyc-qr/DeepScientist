@@ -87,6 +87,7 @@ Before finalizing, gather:
 - latest review / proofing / submission state when a paper bundle exists
 - the paper bundle manifest and its referenced paths when the quest has a paper-like deliverable
 - the paper evidence ledger and selected-outline section statuses when the quest has a paper-like deliverable
+- the latest paper judge report from `artifact.get_latest_paper_judge(...)` when a paper/report bundle exists and model-backed judging was configured or requested
 
 If finalization reveals that the quest is still too uncertain, route back through `decision` rather than forcing closure.
 For paper-like deliverables, do not finalize while any of these remain true:
@@ -98,6 +99,7 @@ For paper-like deliverables, do not finalize while any of these remain true:
 - `artifact.validate_manuscript_coverage(detail='full')` does not report `submission_ready=true`
 - `artifact.validate_academic_outline(detail='full')` does not pass for the selected outline
 - `artifact.validate_manuscript_language(detail='full')` reports main-text wording blockers
+- the latest `artifact.judge_paper(...)` report exists and rates the package below `submission_ready` without an explicit user-approved waiver
 - the latest bundle is only a `draft_checkpoint` or `review_package`
 
 If the current paper-state blocker is not obvious from the existing files, call `artifact.get_paper_contract_health(detail='full')` before deciding whether finalize is legitimate.

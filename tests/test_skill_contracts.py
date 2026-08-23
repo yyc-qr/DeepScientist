@@ -110,6 +110,8 @@ def test_system_prompt_restores_operational_mcp_and_mode_contracts() -> None:
     assert "artifact.get_research_map_status(detail='summary'|'full')" in text
     assert "artifact.resolve_runtime_refs(...)" in text
     assert "artifact.get_method_scoreboard(...)" in text
+    assert "artifact.judge_paper(...)" in _skill_text("write")
+    assert "artifact.get_latest_paper_judge(...)" in _skill_text("write")
     assert "recommended activation ref" in text
     assert "kind='answer'" in text
     assert "The default long-run monitoring cadence is about `60s -> 120s -> 300s -> 600s -> 1800s -> 1800s ...`" in text
@@ -520,6 +522,7 @@ def test_finalize_and_decision_skills_require_bundle_and_outline_actions() -> No
     assert "release/open_source/manifest.json" in finalize_text
     assert "outline_path" in finalize_text
     assert "pdf_path" in finalize_text
+    assert "artifact.get_latest_paper_judge(...)" in finalize_text
     assert "artifact.submit_paper_outline(mode='select', ...)" in decision_text
     assert "artifact.submit_paper_bundle(...)" in decision_text
     assert "method fidelity" in decision_text
@@ -587,6 +590,8 @@ def test_review_skill_requires_independent_audit_outputs_and_followup_routing() 
     assert "paper/review/experiment_todo.md" in text
     assert "paper/paper_experiment_matrix.md" in text
     assert "paper/paper_experiment_matrix.json" in text
+    assert "artifact.judge_paper(...)" in text
+    assert "artifact.get_latest_paper_judge(...)" in text
     assert "review-report-template.md" in text
     assert "revision-log-template.md" in text
     assert "experiment-todo-template.md" in text

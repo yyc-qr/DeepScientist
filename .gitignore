@@ -57,3 +57,5 @@ dist.bak.*/
 /DeepScientist/
 # Local DeepScientist install helper
 /test_install_for_me.sh
+
+/.judge-smoke-home/

@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import os
 import re
 import shutil
 import threading
@@ -15,6 +16,7 @@ from ..arxiv_library import ArxivLibraryService
 from ..benchstore import BenchStoreService
 from ..bridges import register_builtin_connector_bridges
 from ..channels import get_channel_factory, register_builtin_channels
+from ..codex_cli_compat import active_provider_metadata_from_home
 from ..config import ConfigManager
 from ..connector_runtime import conversation_identity_key, infer_connector_transport, normalize_conversation_id
 from ..gitops import (
@@ -33,6 +35,7 @@ from ..gitops import (
     log_ref_history,
 )
 from ..home import repo_root
+from ..judge import PaperJudgeError, PaperJudgeService, load_judge_document, normalize_judge_profile
 from ..registries import BaselineRegistry
 from ..shared import (
     append_jsonl,
@@ -2034,6 +2037,9 @@ class ArtifactService:
 
     def _paper_bundle_manifest_path(self, quest_root: Path, *, workspace_root: Path | None = None) -> Path:
         return self._paper_root(quest_root, workspace_root=workspace_root, create=True) / "paper_bundle_manifest.json"
+
+    def _paper_judge_root(self, quest_root: Path, *, workspace_root: Path | None = None) -> Path:
+        return ensure_dir(self._paper_root(quest_root, workspace_root=workspace_root, create=True) / "judge")
 
     def _paper_artifact_deltas_root(self, quest_root: Path, *, workspace_root: Path | None = None) -> Path:
         return ensure_dir(self._paper_root(quest_root, workspace_root=workspace_root, create=True) / "artifact_deltas")
@@ -8217,6 +8223,331 @@ class ArtifactService:
             "detail": normalized_detail,
             "validation_path": str(validation_path),
             "manuscript_language_validation": result_validation,
+        }
+
+    def _paper_judge_config(self, *, model: str | None = None, provider: str | None = None, api_base: str | None = None, api_key_env: str | None = None) -> dict[str, Any]:
+        manager = ConfigManager(self.home)
+        config = manager.load_runtime_config()
+        judge = dict(config.get("judge") or {}) if isinstance(config.get("judge"), dict) else {}
+        runners = manager.load_runners_config()
+        default_runner = str(config.get("default_runner") or "codex").strip().lower() or "codex"
+        runner = dict(runners.get(default_runner) or {}) if isinstance(runners.get(default_runner), dict) else {}
+        runner_provider_metadata: dict[str, Any] = {}
+        if default_runner == "codex":
+            config_dir = str(runner.get("config_dir") or "").strip()
+            if config_dir:
+                runner_provider_metadata = dict(
+                    active_provider_metadata_from_home(
+                        config_dir,
+                        profile=str(runner.get("profile") or "").strip() or None,
+                    )
+                    or {}
+                )
+
+        def resolved(value: object, fallback: object = None) -> object:
+            text = str(value or "").strip()
+            if not text or text == "inherit":
+                return fallback
+            return value
+
+        resolved_model = resolved(judge.get("model"), runner.get("model") or runner_provider_metadata.get("model"))
+        if str(resolved_model or "").strip() == "inherit":
+            resolved_model = runner_provider_metadata.get("model") or None
+        resolved_api_base = resolved(judge.get("api_base"), runner_provider_metadata.get("base_url"))
+        resolved_api_key_env = resolved(judge.get("api_key_env"), runner_provider_metadata.get("env_key"))
+        env_api_base = str(os.environ.get("DEEPSCIENTIST_JUDGE_API_BASE") or "").strip()
+        env_model = str(os.environ.get("DEEPSCIENTIST_JUDGE_MODEL") or "").strip()
+
+        return {
+            **judge,
+            "provider": str(provider or resolved(judge.get("provider"), "openai_compatible") or "openai_compatible").strip(),
+            "api_base": str(api_base or env_api_base or resolved_api_base or "").strip() or None,
+            "api_key_env": str(api_key_env or resolved_api_key_env or "").strip() or None,
+            "model": str(model or env_model or resolved_model or "").strip() or None,
+        }
+
+    def _paper_judge_target_path(
+        self,
+        quest_root: Path,
+        *,
+        workspace_root: Path,
+        target_path: str | None,
+        manifest: dict[str, Any],
+    ) -> Path | None:
+        explicit = self._resolve_paper_material_path(quest_root, target_path, workspace_root=workspace_root)
+        if explicit is not None:
+            return explicit
+        for key in ("draft_path", "pdf_path", "compile_report_path", "claim_evidence_map_path"):
+            resolved = self._resolve_paper_material_path(quest_root, manifest.get(key), workspace_root=workspace_root)
+            if resolved is not None and resolved.exists() and resolved.is_file():
+                return resolved
+        fallback = self._paper_root(quest_root, workspace_root=workspace_root) / "draft.md"
+        return fallback if fallback.exists() else None
+
+    @staticmethod
+    def _render_paper_judge_markdown(report: dict[str, Any], *, judge_input: dict[str, Any]) -> str:
+        lines = [
+            "# Paper Judge Report",
+            "",
+            f"- Judge profile: `{report.get('judge_profile') or judge_input.get('judge_profile') or 'unknown'}`",
+            f"- Overall score: `{report.get('overall_score')}`",
+            f"- Confidence: `{report.get('confidence')}`",
+            f"- Readiness: `{report.get('readiness')}`",
+            f"- Recommended route: `{report.get('recommended_route')}`",
+            "",
+            "## Summary",
+            "",
+            str(report.get("summary") or "No summary provided.").strip(),
+            "",
+            "## Scores",
+            "",
+        ]
+        scores = report.get("scores") if isinstance(report.get("scores"), dict) else {}
+        for metric_id, payload in scores.items():
+            item = payload if isinstance(payload, dict) else {}
+            score_text = item.get("score") if item.get("status") != "not_assessed" else "not assessed"
+            lines.append(f"- `{metric_id}`: {score_text}")
+            rationale = str(item.get("rationale") or "").strip()
+            evidence = str(item.get("evidence") or "").strip()
+            if rationale:
+                lines.append(f"  - Rationale: {rationale}")
+            if evidence:
+                lines.append(f"  - Evidence: {evidence}")
+        lines.extend(["", "## Unassessed Dimensions", ""])
+        unassessed = report.get("unassessed_dimensions") if isinstance(report.get("unassessed_dimensions"), list) else []
+        if not unassessed:
+            lines.append("- None recorded.")
+        for item in unassessed:
+            payload = item if isinstance(item, dict) else {}
+            lines.append(f"- `{payload.get('id') or 'unknown'}`: {payload.get('reason') or 'Not assessed.'}")
+        for key, title in (
+            ("fatal_issues", "Fatal Issues"),
+            ("major_issues", "Major Issues"),
+            ("minor_issues", "Minor Issues"),
+            ("required_followups", "Required Followups"),
+            ("claim_downgrade_recommendations", "Claim Downgrade Recommendations"),
+        ):
+            lines.extend(["", f"## {title}", ""])
+            issues = report.get(key) if isinstance(report.get(key), list) else []
+            if not issues:
+                lines.append("- None recorded.")
+                continue
+            for issue in issues:
+                payload = issue if isinstance(issue, dict) else {}
+                lines.append(f"- {payload.get('summary') or 'Issue'}")
+                if payload.get("evidence"):
+                    lines.append(f"  - Evidence: {payload.get('evidence')}")
+                if payload.get("recommendation"):
+                    lines.append(f"  - Recommendation: {payload.get('recommendation')}")
+        target = judge_input.get("target") if isinstance(judge_input.get("target"), dict) else {}
+        lines.extend(
+            [
+                "",
+                "## Input Manifest",
+                "",
+                f"- Target path: `{target.get('path') or 'none'}`",
+                f"- Target format: `{target.get('format') or 'unknown'}`",
+                f"- PDF pages: `{target.get('page_count') if target.get('page_count') is not None else 'n/a'}`",
+                f"- Package type: `{judge_input.get('package_type') or 'unknown'}`",
+                f"- Evidence path count: `{len(judge_input.get('evidence_paths') or [])}`",
+            ]
+        )
+        return "\n".join(lines).rstrip() + "\n"
+
+    def judge_paper(
+        self,
+        quest_root: Path,
+        *,
+        target_path: str | None = None,
+        package_type: str = "review_package",
+        judge_profile: str = "research_package",
+        rubric: list[dict[str, Any]] | None = None,
+        evidence_paths: list[str] | None = None,
+        model: str | None = None,
+        provider: str | None = None,
+        api_base: str | None = None,
+        api_key_env: str | None = None,
+        dry_run: bool | None = None,
+    ) -> dict[str, Any]:
+        normalized_judge_profile = normalize_judge_profile(judge_profile)
+        workspace_root = self.quest_service.active_workspace_root(quest_root)
+        paper_root = self._paper_root(quest_root, workspace_root=workspace_root, create=True)
+        manifest_path = self._paper_bundle_manifest_path(quest_root, workspace_root=workspace_root)
+        manifest = read_json(manifest_path, {}) if manifest_path.exists() else {}
+        manifest = manifest if isinstance(manifest, dict) else {}
+        normalized_package_type = self._normalize_paper_bundle_package_type(package_type, strict=False)
+        target = self._paper_judge_target_path(
+            quest_root,
+            workspace_root=workspace_root,
+            target_path=target_path,
+            manifest=manifest,
+        )
+        judge_config = self._paper_judge_config(model=model, provider=provider, api_base=api_base, api_key_env=api_key_env)
+        target_exists = bool(target and target.exists())
+        target_text = ""
+        target_metadata: dict[str, Any] = {}
+        if target_exists and target is not None:
+            target_text, target_metadata = load_judge_document(target, config=judge_config)
+        if normalized_judge_profile == "research_package":
+            contract = self.get_paper_contract(quest_root, detail="full")
+            health = self.get_paper_contract_health(quest_root, detail="full")
+            coverage = self.validate_manuscript_coverage(quest_root, detail="full")
+            language = self.validate_manuscript_language(quest_root, detail="full")
+        else:
+            contract = {}
+            health = {}
+            coverage = {}
+            language = {}
+        resolved_evidence_paths = [str(item).strip() for item in (evidence_paths or []) if str(item).strip()]
+        for key in (
+            "draft_path",
+            "writing_plan_path",
+            "references_path",
+            "claim_evidence_map_path",
+            "evidence_ledger_path",
+            "experiment_matrix_path",
+            "experiment_matrix_json_path",
+            "compile_report_path",
+            "pdf_path",
+        ):
+            value = str(manifest.get(key) or "").strip()
+            if value and value not in resolved_evidence_paths:
+                resolved_evidence_paths.append(value)
+        service = PaperJudgeService(config=judge_config)
+        judge_input = service.build_input(
+            quest_id=self._quest_id(quest_root),
+            package_type=normalized_package_type,
+            target_path=self._paper_bundle_relative_path(quest_root, target, workspace_root=workspace_root) if target else None,
+            target_text=target_text,
+            target_exists=target_exists,
+            target_metadata=target_metadata,
+            manifest=manifest,
+            paper_contract=contract,
+            paper_contract_health=health,
+            coverage=coverage,
+            language=language,
+            evidence_paths=resolved_evidence_paths,
+            judge_profile=normalized_judge_profile,
+            extra_context={},
+            rubric=rubric,
+        )
+        effective_dry_run = bool(judge_config.get("dry_run")) if dry_run is None else bool(dry_run)
+        try:
+            report, raw_response = service.judge(
+                judge_input=judge_input,
+                provider=judge_config.get("provider"),
+                model=judge_config.get("model"),
+                api_base=judge_config.get("api_base"),
+                api_key_env=judge_config.get("api_key_env"),
+                dry_run=effective_dry_run,
+            )
+        except PaperJudgeError:
+            raise
+
+        judge_root = self._paper_judge_root(quest_root, workspace_root=workspace_root)
+        input_path = judge_root / "judge_input_manifest.json"
+        json_path = judge_root / "judge_report.json"
+        md_path = judge_root / "judge_report.md"
+        raw_path = judge_root / "judge_raw_response.jsonl"
+        extraction_path = judge_root / "extraction_manifest.json"
+        extracted_text_path = judge_root / "extracted_text.txt"
+        write_json(input_path, judge_input)
+        write_json(
+            extraction_path,
+            {
+                "schema_version": 1,
+                "created_at": utc_now(),
+                "target_path": judge_input.get("target", {}).get("path"),
+                **target_metadata,
+            },
+        )
+        write_text(extracted_text_path, target_text.rstrip() + "\n" if target_text else "")
+        write_json(json_path, {"schema_version": 1, "created_at": utc_now(), **report})
+        write_text(md_path, self._render_paper_judge_markdown(report, judge_input=judge_input))
+        append_jsonl(
+            raw_path,
+            {
+                "created_at": utc_now(),
+                "dry_run": effective_dry_run,
+                "provider": judge_config.get("provider"),
+                "model": judge_config.get("model"),
+                "raw_response": raw_response,
+            },
+        )
+        artifact = self.record(
+            quest_root,
+            {
+                "kind": "report",
+                "status": "completed",
+                "report_type": "paper_judge",
+                "summary": report.get("summary") or f"Paper judge rated the package {report.get('overall_score')}/5.",
+                "reason": "Evidence-grounded judge report was generated for the current paper/report package.",
+                "flow_type": "paper_judge",
+                "protocol_step": normalized_judge_profile,
+                "paths": {
+                    "judge_report": str(md_path),
+                    "judge_json": str(json_path),
+                    "judge_input_manifest": str(input_path),
+                    "judge_raw_response": str(raw_path),
+                    "extraction_manifest": str(extraction_path),
+                    "extracted_text": str(extracted_text_path),
+                    "target_path": str(target) if target else None,
+                },
+                "details": {
+                    "overall_score": report.get("overall_score"),
+                    "confidence": report.get("confidence"),
+                    "readiness": report.get("readiness"),
+                    "recommended_route": report.get("recommended_route"),
+                    "fatal_issue_count": len(report.get("fatal_issues") or []),
+                    "major_issue_count": len(report.get("major_issues") or []),
+                    "minor_issue_count": len(report.get("minor_issues") or []),
+                    "provider": judge_config.get("provider"),
+                    "model": judge_config.get("model"),
+                    "dry_run": effective_dry_run,
+                    "target_format": target_metadata.get("format"),
+                    "target_page_count": target_metadata.get("page_count"),
+                    "target_characters": target_metadata.get("characters_in_sample"),
+                },
+            },
+            workspace_root=workspace_root,
+        )
+        return {
+            "ok": True,
+            "judge_profile": normalized_judge_profile,
+            "package_type": normalized_package_type,
+            "active_workspace_root": str(workspace_root),
+            "paper_root": str(paper_root),
+            "target_path": str(target) if target else None,
+            "judge_report_path": str(md_path),
+            "judge_json_path": str(json_path),
+            "judge_input_manifest_path": str(input_path),
+            "judge_raw_response_path": str(raw_path),
+            "extraction_manifest_path": str(extraction_path),
+            "extracted_text_path": str(extracted_text_path),
+            "target_metadata": target_metadata,
+            "report": report,
+            "artifact": artifact,
+        }
+
+    def get_latest_paper_judge(self, quest_root: Path) -> dict[str, Any]:
+        workspace_root = self.quest_service.active_workspace_root(quest_root)
+        judge_root = self._paper_root(quest_root, workspace_root=workspace_root, create=False) / "judge"
+        json_path = judge_root / "judge_report.json"
+        md_path = judge_root / "judge_report.md"
+        if not json_path.exists():
+            return {
+                "ok": False,
+                "message": "No paper judge report exists for the active paper workspace.",
+                "judge_json_path": str(json_path),
+                "judge_report_path": str(md_path),
+            }
+        report = read_json(json_path, {})
+        return {
+            "ok": True,
+            "active_workspace_root": str(workspace_root),
+            "judge_json_path": str(json_path),
+            "judge_report_path": str(md_path),
+            "report": report if isinstance(report, dict) else {},
         }
 
     def compile_outline_to_writing_plan(

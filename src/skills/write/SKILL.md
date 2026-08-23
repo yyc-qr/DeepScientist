@@ -61,6 +61,7 @@ If evidence is missing, either obtain evidence, narrow the claim, or mark the bl
    Write introduction / related work / method / experiments / analysis / conclusion as separate jobs. Write the abstract late, after evidence order and section roles stabilize. For oral-grade upgrades, follow the `Draft To Top Conference Oral` section below.
 9. Validate before output and route if needed.
    Refresh claim-evidence, packaging, appendix bridges, `artifact.validate_manuscript_language(detail='full')`, and `artifact.validate_manuscript_coverage(detail='full')`. A short memo is only `artifact.submit_paper_bundle(package_type='draft_checkpoint', ...)`; use `submission_package` only when `submission_ready=true`.
+10. For reviewable or submission-facing paper/report packages, run `artifact.judge_paper(...)` after the bundle exists unless judge configuration is unavailable or the user explicitly asked for local-only writing. Treat the judge as an evidence-grounded reviewer signal: it can route work back to `write`, `review`, `analysis-campaign`, `baseline`, `scout`, `decision`, or `finalize`, but it must not override failed coverage or language gates.
 
 ## Paper Quality Reminder
 
@@ -95,6 +96,10 @@ Do not let structural readiness stand in for paper quality.
   use only when a real paper-facing evidence gap needs follow-up analysis; do not use it for prose cleanup, citation chores, or generic "improve the paper" tasks.
 - `artifact.submit_paper_bundle(...)`:
   use explicit `package_type`: `draft_checkpoint`, `review_package`, or `submission_package` only after coverage is submission-ready.
+- `artifact.judge_paper(...)`:
+  use for paper-like result reports, review packages, and submission packages when a model-backed evidence-grounded quality judgment should be persisted under `paper/judge/`.
+- `artifact.get_latest_paper_judge(...)`:
+  read the latest persisted judge report before continuing from an existing judged draft.
 - `artifact.interact(...)` or other durable artifact updates:
   use when the writing pass materially changes paper status, route choice, or bundle readiness and the change should survive beyond chat.
 - `bash_exec(...)`:

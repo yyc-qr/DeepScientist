@@ -1609,6 +1609,7 @@ def test_get_optimization_frontier_summarizes_briefs_lines_candidates_and_mode(t
     assert frontier["ok"] is True
     payload = frontier["optimization_frontier"]
     assert payload["mode"] == "exploit"
+
     assert payload["best_branch"]["branch_name"] == "run/main-frontier-001"
     assert payload["best_run"]["run_id"] == "main-frontier-001"
     assert payload["candidate_backlog"]["candidate_brief_count"] == 1
@@ -1625,6 +1626,74 @@ def test_get_optimization_frontier_summarizes_briefs_lines_candidates_and_mode(t
     assert payload["best_branch_recent_candidates"][0]["candidate_id"] == "cand-frontier-001"
     assert len(payload["top_branches"]) >= 2
     assert payload["recommended_next_actions"]
+
+
+def test_judge_paper_dry_run_writes_report_and_artifact(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create(
+        "paper judge quest",
+        startup_contract={"need_research_paper": True},
+    )
+    quest_root = Path(quest["quest_root"])
+    paper_root = ensure_dir(quest_root / "paper")
+    draft_path = paper_root / "draft.md"
+    draft_path.write_text(
+        "# Draft\n\nWe introduce a method and report a measured improvement over the baseline.\n",
+        encoding="utf-8",
+    )
+    write_json(
+        paper_root / "paper_bundle_manifest.json",
+        {
+            "schema_version": 1,
+            "package_type": "review_package",
+            "draft_path": "paper/draft.md",
+            "evidence_ledger_path": "paper/evidence_ledger.json",
+        },
+    )
+    write_json(paper_root / "evidence_ledger.json", {"items": []})
+
+    artifact = ArtifactService(temp_home)
+    result = artifact.judge_paper(
+        quest_root,
+        target_path="paper/draft.md",
+        package_type="review_package",
+        dry_run=True,
+    )
+
+    assert result["ok"] is True
+    assert result["report"]["readiness"] in {"weak_reviewable", "reviewable"}
+    assert result["report"]["recommended_route"] == "review"
+    assert Path(result["judge_report_path"]).exists()
+    assert Path(result["judge_json_path"]).exists()
+    assert Path(result["judge_input_manifest_path"]).exists()
+    report = read_json(result["judge_json_path"], {})
+    assert report["schema_version"] == 1
+    assert report["overall_score"] >= 1
+    manifest = read_json(result["judge_input_manifest_path"], {})
+    assert manifest["target"]["path"] == "paper/draft.md"
+    assert result["artifact"]["record"]["report_type"] == "paper_judge"
+
+
+def test_get_latest_paper_judge_reads_dry_run_report(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create("latest paper judge quest")
+    quest_root = Path(quest["quest_root"])
+    paper_root = ensure_dir(quest_root / "paper")
+    (paper_root / "draft.md").write_text("# Draft\n\nA compact report.\n", encoding="utf-8")
+    artifact = ArtifactService(temp_home)
+
+    missing = artifact.get_latest_paper_judge(quest_root)
+    assert missing["ok"] is False
+
+    artifact.judge_paper(quest_root, target_path="paper/draft.md", dry_run=True)
+    latest = artifact.get_latest_paper_judge(quest_root)
+
+    assert latest["ok"] is True
+    assert latest["report"]["readiness"] in {"weak_reviewable", "reviewable"}
 
 
 def test_candidate_experiment_graph_records_lineage_and_reference_edges(temp_home: Path) -> None:

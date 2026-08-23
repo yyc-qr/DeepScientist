@@ -1237,6 +1237,34 @@ def build_artifact_server(context: McpContext) -> FastMCP:
             )
             return compact
 
+        if tool_name == "judge_paper":
+            report = payload.get("report") if isinstance(payload.get("report"), dict) else {}
+            compact.update(
+                {
+                    "judge_profile": payload.get("judge_profile"),
+                    "package_type": payload.get("package_type"),
+                    "overall_score": report.get("overall_score"),
+                    "confidence": report.get("confidence"),
+                    "readiness": report.get("readiness"),
+                    "recommended_route": report.get("recommended_route"),
+                    "fatal_issue_count": len(report.get("fatal_issues") or []),
+                    "major_issue_count": len(report.get("major_issues") or []),
+                    "paths": _compact_paths(
+                        payload,
+                        (
+                            "judge_report_path",
+                            "judge_json_path",
+                            "judge_input_manifest_path",
+                            "judge_raw_response_path",
+                            "extraction_manifest_path",
+                            "extracted_text_path",
+                            "target_path",
+                        ),
+                    ),
+                }
+            )
+            return compact
+
         manifest = payload.get("manifest") if isinstance(payload.get("manifest"), dict) else {}
         paper_line_state = payload.get("paper_line_state") if isinstance(payload.get("paper_line_state"), dict) else {}
         continuation = payload.get("continuation") if isinstance(payload.get("continuation"), dict) else {}
@@ -1741,6 +1769,64 @@ def build_artifact_server(context: McpContext) -> FastMCP:
             detail=detail,
             scope=scope,
         )
+
+    @server.tool(
+        name="judge_paper",
+        description=(
+            "Run an evidence-grounded model judge over the current paper/report package. "
+            "Writes paper/judge/judge_report.md and judge_report.json, then records a report artifact. "
+            "Use dry_run=true only for configuration or local plumbing checks."
+        ),
+    )
+    def judge_paper(
+        target_path: str | None = None,
+        package_type: str = "review_package",
+        judge_profile: str = "research_package",
+        rubric: list[dict[str, Any]] | None = None,
+        evidence_paths: list[str] | None = None,
+        model: str | None = None,
+        provider: str | None = None,
+        api_base: str | None = None,
+        api_key_env: str | None = None,
+        dry_run: bool | None = None,
+        comment: str | dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        try:
+            result = service.judge_paper(
+                context.require_quest_root(),
+                target_path=target_path,
+                package_type=package_type,
+                judge_profile=judge_profile,
+                rubric=rubric,
+                evidence_paths=evidence_paths,
+                model=model,
+                provider=provider,
+                api_base=api_base,
+                api_key_env=api_key_env,
+                dry_run=dry_run,
+            )
+            return finalize_state_changing_artifact_tool(
+                compact_paper_write_result(result, tool_name="judge_paper"),
+                tool_name="judge_paper",
+            )
+        except (ValueError, FileNotFoundError, RuntimeError) as exc:
+            return finalize_artifact_tool(
+                _artifact_guided_error_payload(
+                    service,
+                    context.require_quest_root(),
+                    tool_name="judge_paper",
+                    exc=exc,
+                ),
+                tool_name="judge_paper",
+            )
+
+    @server.tool(
+        name="get_latest_paper_judge",
+        description="Read the latest paper/report judge result for the active paper workspace.",
+        annotations=_read_only_tool_annotations(title="Get latest paper judge"),
+    )
+    def get_latest_paper_judge(comment: str | dict[str, Any] | None = None) -> dict[str, Any]:
+        return service.get_latest_paper_judge(context.require_quest_root())
 
     @server.tool(
         name="compile_outline_to_writing_plan",
