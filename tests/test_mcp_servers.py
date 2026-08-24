@@ -1848,6 +1848,7 @@ def test_artifact_mcp_candidate_experiment_graph_round_trip(temp_home: Path) -> 
                     "candidate_id": "cand-mcp-root",
                     "line_id": "line-mcp",
                     "summary": "MCP root candidate",
+                    "mcts_prior": 0.6,
                 },
             )
         )
@@ -1867,6 +1868,7 @@ def test_artifact_mcp_candidate_experiment_graph_round_trip(temp_home: Path) -> 
 
         assert root["ok"] is True
         assert child["candidate"]["parent_candidate_id"] == "cand-mcp-root"
+        assert root["candidate"]["mcts_prior"] == 0.6
         assert graph["node_count"] == 2
         assert any(edge["relation"] == "reference" for edge in graph["edges"])
 

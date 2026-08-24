@@ -213,6 +213,19 @@ updated_at: 2026-03-11T18:00:00+00:00
 
 ## 4. Artifact 指标契约规则
 
+### Algorithm-first PUCT-MCTS 推荐
+
+algorithm-first quest 的 `artifact.get_optimization_frontier(...)` 可能包含 `mcts`
+字段。它是对已经可执行的 implementation candidate 所做的本地、确定性 PUCT-MCTS
+排序；不会执行命令、调用模型，也不会把预估当作实验结果。
+
+只有 frontier 至少有 3 个可执行根候选、2 个带数值实际回报的已完成候选时，策略才会启用。
+评分使用已记录的回报、候选成本、重复失败签名、范围为 `0` 到 `1` 的可选且需说明的
+`mcts_prior`，以及候选图谱系。若未启用，字段会给出原因，正常 frontier 逻辑仍然生效。
+
+应把推荐视为默认验证顺序，而不是绕开 metric、baseline、安全或执行 gate 的理由。若新硬证据
+支持覆盖建议，必须将原因记录为 artifact decision。
+
 baseline 与主实验的正式指标提交，应以 `artifact` 为唯一权威入口。
 
 ### `artifact.confirm_baseline(...)`

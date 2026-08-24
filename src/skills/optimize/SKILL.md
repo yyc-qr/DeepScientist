@@ -65,6 +65,9 @@ Recover the current frontier, choose one optimize submode, advance one justified
 - Keep only one bottom-layer optimize move truly in progress at a time.
 - Before deciding the next route, call `artifact.get_optimization_frontier(...)` when available and use it as the primary optimization-state summary.
 - Inspect `candidate_graph_summary` for repeated failures, candidate stagnation, search concentration, and fusion opportunities; call `artifact.get_candidate_experiment_graph(...)` when node-level lineage matters.
+- Inspect `frontier['mcts']` after refreshing the frontier. When its `enabled` flag is true, use its PUCT-MCTS recommendation as the default order for the next bounded candidate validation. Override it only when new hard evidence invalidates its metric contract, safety, or execution precondition, and record that reason.
+- PUCT-MCTS is automatically gated: it is available only in algorithm-first quests with at least three actionable root candidates and two numeric observed candidate outcomes. If the frontier says it is ineligible, retain the ordinary frontier route instead of manufacturing a MCTS decision.
+- Record `mcts_prior` only as a documented `0-1` evidence prior for an implementation candidate; it is not an invented result and never substitutes for a measured reward.
 - Candidate briefs should use `artifact.submit_idea(..., submission_mode='candidate')`.
 - Durable lines should use `artifact.submit_idea(..., submission_mode='line')`.
 - Only promote a candidate brief into a durable line when it has enough expected value, differentiation, and execution path clarity to deserve branch/worktree state.

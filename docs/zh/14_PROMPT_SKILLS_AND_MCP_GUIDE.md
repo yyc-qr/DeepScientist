@@ -329,6 +329,7 @@ DeepScientist 当前有两层 skill：
 | `scout` | 任务框架还不清楚 | 定义问题、找 baseline、确认数据集和 metric 合同 | `baseline` 或 `idea` |
 | `baseline` | 还没有可信 baseline | attach、import、复现、修复和验证 baseline | `idea` |
 | `idea` | baseline 清楚，但下一条研究路线不清楚 | 生成、比较并选择可持久化的新方向 | `experiment` |
+| `optimize` | algorithm-first quest 已有可执行候选 | 从优化前沿执行排序、晋升、探索、利用、融合、调试或停止 | `experiment` 或 `decision` |
 | `experiment` | 已经有选中的 idea | 在单条 durable 线路上实现并跑主实验 | `analysis-campaign`、`write` 或 `decision` |
 | `analysis-campaign` | 需要补充实验 | 跑 slice、ablation、robustness 或 reviewer-facing supplement | `write`、`decision` 或 `finalize` |
 | `write` | 证据已经足够写作 | 把证据转成 outline、draft 和 paper bundle | `review` 或 `finalize` |
@@ -362,6 +363,12 @@ DeepScientist 的 daemon 不应该变成一个巨大的硬编码科研调度器�
 
 这就是 DeepScientist 最核心的设计选择之一。
 
+### 6.4 优化前沿中的 PUCT-MCTS
+
+`optimize` 的 frontier snapshot 可以包含本地 PUCT-MCTS 建议。它不是开放式 idea 生成算法，而是对已经可执行的候选实验进行有界预算分配的策略。它结合数值实际回报、候选成本、重复失败签名、显式 `mcts_prior` 和候选父子谱系。
+
+该策略自动启用但有严格门槛：仅 algorithm-first quest 且至少有 3 个可执行根候选、2 个带数值回报的已完成候选时运行。否则 snapshot 会给出禁用原因，原有 `explore`、`exploit`、`fusion`、`debug` 或 `stop` 路由仍是权威。除非新硬证据使前提失效，否则应优先执行推荐候选；任何覆盖该建议的决定都必须持久化记录。
+
 ## 7. 每个 skill 通常会留下什么 durable 输出
 
 你可以期待的大致持久化产物如下：
@@ -371,6 +378,7 @@ DeepScientist 的 daemon 不应该变成一个巨大的硬编码科研调度器�
 | `scout` | 更新后的 `brief.md`、更新后的 `plan.md`、文献笔记、framing memory |
 | `baseline` | `PLAN.md`、`CHECKLIST.md`、baseline 验证记录、confirmed 或 waived baseline 状态 |
 | `idea` | durable idea draft、选中路线包、为什么这条路线胜出的理由 |
+| `optimize` | candidate brief、frontier 状态、候选图记录，以及可审计的可选 MCTS 建议 |
 | `experiment` | 实现改动、run logs、`record_main_experiment(...)`、结果证据 |
 | `analysis-campaign` | campaign manifest、slice 记录、综合分析说明 |
 | `write` | selected outline、writing plan、draft、references、claim-evidence map、paper bundle |

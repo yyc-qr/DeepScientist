@@ -68,6 +68,12 @@ skills:
   sync_global_on_init: true
   sync_quest_on_create: true
   sync_quest_on_open: true
+optimization:
+  mcts:
+    mode: auto
+    simulations: 96
+    exploration_constant: 1.2
+    max_depth: 3
 bootstrap:
   codex_ready: false
   codex_last_checked_at: null
@@ -93,6 +99,17 @@ acp:
   sdk_bridge_enabled: false
   sdk_module: acp
 ```
+
+### Algorithm-first MCTS
+
+`optimization.mcts` 控制 algorithm-first 优化前沿使用的本地 PUCT-MCTS 推荐策略。
+
+- `mode`：默认 `auto`，只有满足证据门槛时启用；`off` 始终保留原有 frontier 路由规则。
+- `simulations`：每次刷新 frontier 的确定性本地搜索预算；不会启动实验，也不会调用模型。
+- `exploration_constant`：平衡高预估收益候选与尚未充分探索的候选。
+- `max_depth`：一次 rollout 考虑的候选谱系最大深度。
+
+MCTS 不会用于论文导向 quest。`auto` 模式还要求至少有 3 个可执行根候选和 2 个带数值实际回报的已完成候选，否则保持禁用。它输出的是实验优先级建议，不是实验结果声明。
 
 ### 核心身份
 

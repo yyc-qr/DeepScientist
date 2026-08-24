@@ -57,6 +57,7 @@ from .arxiv import fetch_arxiv_metadata, read_arxiv_content
 from .candidate_graph import normalize_id_list, project_candidate_graph, validate_candidate_node
 from .charts import render_main_experiment_metric_timeline_chart
 from .guidance import build_guidance_for_record, guidance_summary
+from .mcts import build_mcts_recommendation
 from .metrics import (
     baseline_metric_lines,
     build_metrics_timeline,
@@ -6234,6 +6235,7 @@ class ArtifactService:
     def _optimization_candidate_events(self, quest_root: Path) -> list[dict[str, Any]]:
         artifacts = self.quest_service._collect_artifacts(quest_root)
         validation_links: dict[str, str] = {}
+        validation_observations: dict[str, dict[str, Any]] = {}
         for item in artifacts:
             payload = dict(item.get("payload") or {}) if isinstance(item.get("payload"), dict) else {}
             details = dict(payload.get("details") or {}) if isinstance(payload.get("details"), dict) else {}
@@ -6243,6 +6245,20 @@ class ArtifactService:
             run_id = str(payload.get("run_id") or details.get("run_id") or "").strip()
             if source_candidate_id and run_id:
                 validation_links[source_candidate_id] = run_id
+                progress_eval = payload.get("progress_eval") if isinstance(payload.get("progress_eval"), dict) else {}
+                raw_delta = to_number(
+                    details.get("delta_vs_baseline", payload.get("delta_vs_baseline", progress_eval.get("delta_vs_baseline")))
+                )
+                if raw_delta is not None:
+                    primary_metric_id = str(
+                        details.get("primary_metric_id") or progress_eval.get("primary_metric_id") or ""
+                    ).strip() or None
+                    direction = str(progress_eval.get("direction") or "").strip().lower() or None
+                    validation_observations[source_candidate_id] = {
+                        "observed_reward": -raw_delta if direction in {"minimize", "lower", "lower_better"} else raw_delta,
+                        "observed_metric_id": primary_metric_id,
+                        "observed_direction": direction,
+                    }
         records: list[dict[str, Any]] = []
         for item in artifacts:
             payload = dict(item.get("payload") or {}) if isinstance(item.get("payload"), dict) else {}
@@ -6277,6 +6293,7 @@ class ArtifactService:
                     "summary": str(payload.get("summary") or "").strip() or None,
                     "change_plan": str(payload.get("change_plan") or details.get("change_plan") or "").strip() or None,
                     "expected_gain": str(payload.get("expected_gain") or details.get("expected_gain") or "").strip() or None,
+                    "mcts_prior": to_number(payload.get("mcts_prior", details.get("mcts_prior"))),
                     "linked_run_id": str(
                         payload.get("linked_run_id")
                         or details.get("linked_run_id")
@@ -6291,6 +6308,21 @@ class ArtifactService:
                     "compute_seconds": payload.get("compute_seconds", details.get("compute_seconds")),
                     "evidence_paths": normalize_id_list(payload.get("evidence_paths") or details.get("evidence_paths")),
                     "metrics_snapshot": payload.get("metrics_snapshot") or details.get("metrics_snapshot"),
+                    "observed_reward": (
+                        validation_observations.get(str(payload.get("candidate_id") or details.get("candidate_id") or "").strip(), {}).get("observed_reward")
+                        if str(payload.get("candidate_id") or details.get("candidate_id") or "").strip() in validation_observations
+                        else to_number(payload.get("observed_reward", details.get("observed_reward")))
+                    ),
+                    "observed_metric_id": (
+                        validation_observations.get(str(payload.get("candidate_id") or details.get("candidate_id") or "").strip(), {}).get("observed_metric_id")
+                        if str(payload.get("candidate_id") or details.get("candidate_id") or "").strip() in validation_observations
+                        else str(payload.get("observed_metric_id") or details.get("observed_metric_id") or "").strip() or None
+                    ),
+                    "observed_direction": (
+                        validation_observations.get(str(payload.get("candidate_id") or details.get("candidate_id") or "").strip(), {}).get("observed_direction")
+                        if str(payload.get("candidate_id") or details.get("candidate_id") or "").strip() in validation_observations
+                        else str(payload.get("observed_direction") or details.get("observed_direction") or "").strip().lower() or None
+                    ),
                     "event_type": str(payload.get("event_type") or details.get("event_type") or "create").strip() or "create",
                     "event_version": int(payload.get("event_version") or details.get("event_version") or 1),
                     "updated_at": str(payload.get("updated_at") or payload.get("created_at") or "").strip() or None,
@@ -6325,6 +6357,7 @@ class ArtifactService:
         source_lens: str | None = None,
         change_plan: str | None = None,
         expected_gain: str | None = None,
+        mcts_prior: float | None = None,
         code_change_mode: str | None = None,
         metrics_snapshot: dict[str, Any] | None = None,
         failure_kind: str | None = None,
@@ -6359,6 +6392,16 @@ class ArtifactService:
         previous = {
             key: value for key, value in previous_projected.items() if key not in persistence_fields
         }
+        raw_mcts_prior = mcts_prior if mcts_prior is not None else previous.get("mcts_prior")
+        normalized_mcts_prior = to_number(raw_mcts_prior)
+        if raw_mcts_prior is not None and (
+            normalized_mcts_prior is None or normalized_mcts_prior < 0 or normalized_mcts_prior > 1
+        ):
+            return {
+                "ok": False,
+                "errors": ["mcts_prior must be a finite number between 0 and 1."],
+                "warnings": [],
+            }
         event_time = utc_now()
 
         node = {
@@ -6383,6 +6426,7 @@ class ArtifactService:
             "source_lens": str(source_lens or previous.get("source_lens") or "").strip() or None,
             "change_plan": str(change_plan or previous.get("change_plan") or "").strip() or None,
             "expected_gain": str(expected_gain or previous.get("expected_gain") or "").strip() or None,
+            "mcts_prior": normalized_mcts_prior,
             "code_change_mode": str(code_change_mode or previous.get("code_change_mode") or "").strip().lower() or None,
             "metrics_snapshot": metrics_snapshot if metrics_snapshot is not None else previous.get("metrics_snapshot"),
             "failure_kind": str(failure_kind or previous.get("failure_kind") or "").strip() or None,
@@ -6453,6 +6497,12 @@ class ArtifactService:
         )
 
     def _optimization_frontier_state(self, quest_root: Path) -> dict[str, Any]:
+        runtime_config = ConfigManager(self.home).load_runtime_config()
+        optimization_config = (
+            dict(runtime_config.get("optimization") or {})
+            if isinstance(runtime_config.get("optimization"), dict)
+            else {}
+        )
         return {
             "artifact_projection": self.quest_service._json_compatible_state(
                 self.quest_service._path_state(self.quest_service._artifact_projection_path(quest_root))
@@ -6463,6 +6513,7 @@ class ArtifactService:
             "quest_yaml": self.quest_service._json_compatible_state(
                 self.quest_service._path_state(self.quest_service._quest_yaml_path(quest_root))
             ),
+            "optimization_config": optimization_config,
         }
 
     @staticmethod
@@ -6580,6 +6631,33 @@ class ArtifactService:
             )
         )
         candidate_graph_summary = self._candidate_graph_frontier_summary(candidate_graph)
+        startup_contract = self._startup_contract(quest_root)
+        raw_need_research_paper = startup_contract.get("need_research_paper")
+        is_algorithm_first = raw_need_research_paper is False
+        runtime_config = ConfigManager(self.home).load_runtime_config()
+        optimization_config = (
+            dict(runtime_config.get("optimization") or {})
+            if isinstance(runtime_config.get("optimization"), dict)
+            else {}
+        )
+        mcts_config = (
+            dict(optimization_config.get("mcts") or {})
+            if isinstance(optimization_config.get("mcts"), dict)
+            else {}
+        )
+        configured_mode = str(mcts_config.get("mode") or "auto").strip().lower() or "auto"
+        simulations = int(to_number(mcts_config.get("simulations")) or 96)
+        exploration_constant = float(to_number(mcts_config.get("exploration_constant")) or 1.2)
+        max_depth = int(to_number(mcts_config.get("max_depth")) or 3)
+        mcts = build_mcts_recommendation(
+            implementation_candidates,
+            mode=configured_mode if is_algorithm_first else "off",
+            simulations=max(1, simulations),
+            exploration_constant=max(0.0, exploration_constant),
+            max_depth=max(1, max_depth),
+        )
+        if not is_algorithm_first:
+            mcts["reason"] = "MCTS is available only for algorithm-first quests; the paper-oriented frontier is unchanged."
 
         branches.sort(key=self._frontier_branch_rank, reverse=True)
         top_branches = branches[:3]
@@ -6716,6 +6794,7 @@ class ArtifactService:
                 "best_branch_recent_candidates": best_branch_recent_candidates,
                 "candidate_backlog": candidate_backlog,
                 "candidate_graph_summary": candidate_graph_summary,
+                "mcts": mcts,
                 "stagnant_branches": stagnant_branches,
                 "fusion_candidates": fusion_candidates,
                 "recommended_next_actions": recommended_next_actions,

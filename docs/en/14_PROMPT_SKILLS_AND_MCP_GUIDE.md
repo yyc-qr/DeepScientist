@@ -329,6 +329,7 @@ These are the main research anchors:
 | `scout` | the task frame is still unclear | task framing, baseline discovery, metric and dataset clarification | `baseline` or `idea` |
 | `baseline` | a trustworthy baseline does not yet exist | attach, import, reproduce, repair, and verify the baseline | `idea` |
 | `idea` | the baseline is clear but the next direction is not | generate, compare, and select durable research directions | `experiment` |
+| `optimize` | an algorithm-first quest has executable candidates | rank, promote, explore, exploit, fuse, debug, or stop from the optimization frontier | `experiment` or `decision` |
 | `experiment` | one selected idea is ready to run | implement and evaluate the main run on one durable line | `analysis-campaign`, `write`, or `decision` |
 | `analysis-campaign` | follow-up experiments are needed | run slices, ablations, robustness checks, or reviewer-facing supplements | `write`, `decision`, or `finalize` |
 | `write` | there is enough evidence to draft | turn accepted evidence into outline, draft, and paper bundle work | `review` or `finalize` |
@@ -362,6 +363,12 @@ Instead:
 
 That is the core DeepScientist design choice.
 
+### 6.4 PUCT-MCTS on an optimization frontier
+
+`optimize` may receive a local PUCT-MCTS recommendation in its frontier snapshot. This is not a general idea-generation algorithm: it is a bounded allocation policy for already executable candidate experiments. It combines numeric observed reward with candidate cost, repeated failure signatures, explicit `mcts_prior`, and parent/child candidate lineage.
+
+The policy is automatic but guarded. It runs only for algorithm-first quests with at least three actionable root candidates and two completed candidates carrying numeric reward. Otherwise the snapshot says why it is disabled and the normal `explore`, `exploit`, `fusion`, `debug`, or `stop` logic remains authoritative. A recommended candidate should be followed unless new hard evidence invalidates its preconditions; an override must be recorded as a durable decision.
+
 ## 7. What each skill usually leaves behind
 
 These are the durable outputs you should expect:
@@ -371,6 +378,7 @@ These are the durable outputs you should expect:
 | `scout` | updated `brief.md`, updated `plan.md`, literature notes, framing memory |
 | `baseline` | `PLAN.md`, `CHECKLIST.md`, baseline verification notes, confirmed or waived baseline state |
 | `idea` | durable idea draft, selected idea package, rationale for why this route won |
+| `optimize` | candidate briefs, frontier state, candidate graph records, and an optional auditable MCTS recommendation |
 | `experiment` | implementation changes, run logs, `record_main_experiment(...)`, result evidence |
 | `analysis-campaign` | campaign manifest, slice records, synthesis notes |
 | `write` | selected outline, writing plan, draft, references, claim-evidence map, paper bundle |

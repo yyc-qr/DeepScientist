@@ -11,6 +11,7 @@ import deepscientist.memory.service as memory_service_module
 
 from deepscientist.artifact import ArtifactService
 from deepscientist.artifact.candidate_graph import project_candidate_graph
+from deepscientist.artifact.mcts import build_mcts_recommendation
 from deepscientist.artifact.metrics import MetricContractValidationError
 from deepscientist.connector.weixin_support import remember_weixin_context_token
 from deepscientist.config import ConfigManager
@@ -1645,6 +1646,7 @@ def test_candidate_experiment_graph_records_lineage_and_reference_edges(temp_hom
         summary="Initial candidate",
         hypothesis="A local change improves the baseline.",
         mechanism_family="adapter",
+        mcts_prior=0.65,
         code_change_mode="stepwise",
         status="evaluated",
         metrics_snapshot={"primary": {"metric_id": "acc", "value": 0.81}},
@@ -1685,6 +1687,8 @@ def test_candidate_experiment_graph_records_lineage_and_reference_edges(temp_hom
     child_node = next(item for item in graph["nodes"] if item["candidate_id"] == "cand-child")
     assert child_node["parent_candidate_id"] == "cand-root"
     assert child_node["reference_candidate_ids"] == ["cand-root"]
+    root_node = next(item for item in graph["nodes"] if item["candidate_id"] == "cand-root")
+    assert root_node["mcts_prior"] == 0.65
 
     updated = artifact.record_candidate_experiment(
         quest_root,
@@ -1781,6 +1785,76 @@ def test_main_experiment_keeps_source_candidate_trace(temp_home: Path) -> None:
         "target": "trace-run-001",
         "relation": "validated_by",
     } in graph["edges"]
+    traced_candidate = next(item for item in graph["nodes"] if item["candidate_id"] == "cand-trace")
+    assert traced_candidate["observed_reward"] == pytest.approx(0.06)
+
+
+def test_main_experiment_orients_minimize_reward_for_source_candidate(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create(
+        "minimize candidate trace quest",
+        startup_contract={"need_research_paper": False},
+    )
+    quest_root = Path(quest["quest_root"])
+    artifact = ArtifactService(temp_home)
+    baseline_root = quest_root / "baselines" / "local" / "baseline-loss-trace"
+    baseline_root.mkdir(parents=True, exist_ok=True)
+    (baseline_root / "README.md").write_text("# Baseline\n", encoding="utf-8")
+    artifact.confirm_baseline(
+        quest_root,
+        baseline_path=str(baseline_root),
+        baseline_id="baseline-loss-trace",
+        summary="Confirmed lower-is-better baseline.",
+        metrics_summary={"loss": 0.5},
+        primary_metric={"name": "loss", "value": 0.5},
+        metric_contract={
+            "primary_metric_id": "loss",
+            "metrics": [{"metric_id": "loss", "direction": "minimize"}],
+        },
+    )
+    artifact.record_candidate_experiment(
+        quest_root,
+        candidate_id="cand-loss-trace",
+        line_id="line-loss-trace",
+        summary="Candidate for a lower-loss main run.",
+        hypothesis="The candidate should reduce loss.",
+        status="promoted",
+    )
+    artifact.submit_idea(
+        quest_root,
+        mode="create",
+        submission_mode="line",
+        title="Loss trace line",
+        problem="Baseline loss can be reduced.",
+        hypothesis="The promoted candidate reduces loss.",
+        mechanism="Apply the candidate change.",
+        decision_reason="Run the promoted candidate.",
+        next_target="experiment",
+    )
+
+    result = artifact.record_main_experiment(
+        quest_root,
+        run_id="loss-trace-run-001",
+        source_candidate_id="cand-loss-trace",
+        title="Loss trace run",
+        hypothesis="The candidate reduces loss.",
+        setup="Use the confirmed baseline recipe.",
+        execution="Run the evaluator.",
+        results="Loss decreased.",
+        conclusion="The candidate is supported.",
+        metric_rows=[{"metric_id": "loss", "value": 0.4}],
+    )
+
+    assert result["ok"] is True
+    traced_candidate = next(
+        item for item in artifact.get_candidate_experiment_graph(quest_root)["nodes"]
+        if item["candidate_id"] == "cand-loss-trace"
+    )
+    assert traced_candidate["observed_reward"] == pytest.approx(0.1)
+    assert traced_candidate["observed_metric_id"] == "loss"
+    assert traced_candidate["observed_direction"] == "minimize"
 
 
 def test_candidate_graph_nodes_are_chronological_for_frontier_slicing() -> None:
@@ -1858,6 +1932,239 @@ def test_optimization_frontier_exposes_candidate_graph_failure_and_fusion_statis
         set(item["mechanism_families"]) == {"adapter", "retrieval"}
         for item in stats["fusion_opportunities"]
     )
+
+
+def test_mcts_recommendation_falls_back_without_a_measured_candidate_frontier() -> None:
+    recommendation = build_mcts_recommendation(
+        [
+            {"candidate_id": "cand-a", "status": "proposed", "mechanism_family": "adapter"},
+            {"candidate_id": "cand-b", "status": "proposed", "mechanism_family": "retrieval"},
+        ],
+        mode="auto",
+    )
+
+    assert recommendation["enabled"] is False
+    assert recommendation["eligible"] is False
+    assert recommendation["recommended_candidate_id"] is None
+    assert "at least 3 actionable" in recommendation["reason"].lower()
+
+
+def test_mcts_recommendation_prioritizes_measured_value_over_cost_and_repeated_failures() -> None:
+    candidates = [
+        {
+            "candidate_id": "adapter-win",
+            "status": "evaluated",
+            "mechanism_family": "adapter",
+            "metrics_snapshot": {"primary": {"delta_vs_baseline": 0.12}},
+            "compute_seconds": 30,
+        },
+        {
+            "candidate_id": "adapter-win-2",
+            "status": "evaluated",
+            "mechanism_family": "adapter",
+            "metrics_snapshot": {"primary": {"delta_vs_baseline": 0.09}},
+            "compute_seconds": 35,
+        },
+        {
+            "candidate_id": "unstable-1",
+            "status": "failed",
+            "mechanism_family": "unstable",
+            "failure_signature": "nan_loss",
+            "compute_seconds": 20,
+        },
+        {
+            "candidate_id": "unstable-2",
+            "status": "smoke_failed",
+            "mechanism_family": "unstable",
+            "failure_signature": "nan_loss",
+            "compute_seconds": 25,
+        },
+        {
+            "candidate_id": "adapter-cheap",
+            "status": "proposed",
+            "mechanism_family": "adapter",
+            "mcts_prior": 0.55,
+            "compute_seconds": 40,
+        },
+        {
+            "candidate_id": "adapter-expensive",
+            "status": "proposed",
+            "mechanism_family": "adapter",
+            "mcts_prior": 0.85,
+            "compute_seconds": 3000,
+        },
+        {
+            "candidate_id": "unstable-repeat",
+            "status": "proposed",
+            "mechanism_family": "unstable",
+            "failure_signature": "nan_loss",
+            "mcts_prior": 0.9,
+            "compute_seconds": 20,
+        },
+    ]
+
+    recommendation = build_mcts_recommendation(candidates, mode="auto", simulations=64)
+
+    assert recommendation["enabled"] is True
+    assert recommendation["eligible"] is True
+    assert recommendation["recommended_candidate_id"] == "adapter-cheap"
+    assert recommendation["simulations"] == 64
+    ranked_ids = [item["candidate_id"] for item in recommendation["ranked_actions"]]
+    assert ranked_ids.index("adapter-cheap") < ranked_ids.index("adapter-expensive")
+    assert ranked_ids.index("adapter-cheap") < ranked_ids.index("unstable-repeat")
+    assert all("puct_score" in item for item in recommendation["ranked_actions"])
+    assert recommendation == build_mcts_recommendation(candidates, mode="auto", simulations=64)
+
+
+def test_mcts_recommendation_does_not_reschedule_a_candidate_with_a_linked_main_run() -> None:
+    candidates = [
+        {
+            "candidate_id": "observed-a",
+            "status": "evaluated",
+            "mechanism_family": "adapter",
+            "observed_reward": 0.08,
+        },
+        {
+            "candidate_id": "observed-b",
+            "status": "evaluated",
+            "mechanism_family": "adapter",
+            "observed_reward": 0.1,
+        },
+        {
+            "candidate_id": "validated-candidate",
+            "status": "promoted",
+            "mechanism_family": "adapter",
+            "linked_run_id": "main-001",
+            "observed_reward": 0.4,
+            "mcts_prior": 1.0,
+        },
+        {"candidate_id": "candidate-a", "status": "proposed", "mechanism_family": "adapter"},
+        {"candidate_id": "candidate-b", "status": "proposed", "mechanism_family": "adapter"},
+        {"candidate_id": "candidate-c", "status": "proposed", "mechanism_family": "adapter"},
+    ]
+
+    recommendation = build_mcts_recommendation(candidates, mode="auto")
+
+    assert recommendation["enabled"] is True
+    assert "validated-candidate" not in {
+        item["candidate_id"] for item in recommendation["ranked_actions"]
+    }
+
+
+def test_mcts_normalizes_minimize_metrics_and_rejects_mixed_metric_rewards() -> None:
+    minimize_candidates = [
+        {
+            "candidate_id": "loss-a",
+            "status": "evaluated",
+            "mechanism_family": "optimizer",
+            "metrics_snapshot": {"primary": {"metric_id": "loss", "direction": "minimize", "delta_vs_baseline": -0.2}},
+        },
+        {
+            "candidate_id": "loss-b",
+            "status": "evaluated",
+            "mechanism_family": "optimizer",
+            "metrics_snapshot": {"primary": {"metric_id": "loss", "direction": "minimize", "delta_vs_baseline": -0.1}},
+        },
+        {"candidate_id": "candidate-a", "status": "proposed", "mechanism_family": "optimizer"},
+        {"candidate_id": "candidate-b", "status": "proposed", "mechanism_family": "optimizer"},
+        {"candidate_id": "candidate-c", "status": "proposed", "mechanism_family": "optimizer"},
+    ]
+    recommendation = build_mcts_recommendation(minimize_candidates, mode="auto")
+    assert recommendation["enabled"] is True
+    assert recommendation["ranked_actions"][0]["estimated_reward"] > 0
+
+    mixed_metric_candidates = [
+        *minimize_candidates[:1],
+        {
+            "candidate_id": "accuracy-b",
+            "status": "evaluated",
+            "mechanism_family": "optimizer",
+            "metrics_snapshot": {"primary": {"metric_id": "accuracy", "direction": "maximize", "delta_vs_baseline": 0.1}},
+        },
+        *minimize_candidates[2:],
+    ]
+    mixed = build_mcts_recommendation(mixed_metric_candidates, mode="auto")
+    assert mixed["enabled"] is False
+    assert "same primary metric" in mixed["reason"].lower()
+
+
+def test_algorithm_first_frontier_exposes_auto_gated_mcts_recommendation(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create(
+        "MCTS frontier quest",
+        startup_contract={"need_research_paper": False},
+    )
+    quest_root = Path(quest["quest_root"])
+    artifact = ArtifactService(temp_home)
+
+    for candidate_id, delta in (("observed-a", 0.08), ("observed-b", 0.12)):
+        artifact.record_candidate_experiment(
+            quest_root,
+            candidate_id=candidate_id,
+            summary=f"Measured {candidate_id}.",
+            mechanism_family="adapter",
+            status="evaluated",
+            metrics_snapshot={"primary": {"delta_vs_baseline": delta}},
+            compute_seconds=30,
+        )
+    for candidate_id in ("candidate-a", "candidate-b", "candidate-c"):
+        artifact.record_candidate_experiment(
+            quest_root,
+            candidate_id=candidate_id,
+            summary=f"Queued {candidate_id}.",
+            mechanism_family="adapter",
+            status="proposed",
+            compute_seconds=30,
+        )
+
+    payload = artifact.get_optimization_frontier(quest_root)["optimization_frontier"]
+
+    assert payload["mcts"]["enabled"] is True
+    assert payload["mcts"]["eligible"] is True
+    assert payload["mcts"]["recommended_candidate_id"] in {"candidate-a", "candidate-b", "candidate-c"}
+    assert payload["mcts"]["observed_reward_count"] == 2
+
+    runtime_config_path = temp_home / "config" / "config.yaml"
+    runtime_config = read_yaml(runtime_config_path, {})
+    runtime_config["optimization"] = {"mcts": {"mode": "off"}}
+    write_yaml(runtime_config_path, runtime_config)
+
+    disabled = artifact.get_optimization_frontier(quest_root)["optimization_frontier"]["mcts"]
+
+    assert disabled["enabled"] is False
+    assert "disabled by configuration" in disabled["reason"].lower()
+
+
+def test_paper_frontier_keeps_mcts_disabled_even_when_candidate_data_is_available(temp_home: Path) -> None:
+    ensure_home_layout(temp_home)
+    ConfigManager(temp_home).ensure_files()
+    quest_service = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home))
+    quest = quest_service.create("paper MCTS guard quest")
+    quest_root = Path(quest["quest_root"])
+    artifact = ArtifactService(temp_home)
+
+    for candidate_id, status, delta in (
+        ("observed-a", "evaluated", 0.08),
+        ("observed-b", "evaluated", 0.12),
+        ("candidate-a", "proposed", None),
+        ("candidate-b", "proposed", None),
+        ("candidate-c", "proposed", None),
+    ):
+        artifact.record_candidate_experiment(
+            quest_root,
+            candidate_id=candidate_id,
+            summary=f"Candidate {candidate_id}.",
+            mechanism_family="adapter",
+            status=status,
+            metrics_snapshot={"primary": {"delta_vs_baseline": delta}} if delta is not None else None,
+        )
+
+    payload = artifact.get_optimization_frontier(quest_root)["optimization_frontier"]
+
+    assert payload["mcts"]["enabled"] is False
+    assert "algorithm-first" in payload["mcts"]["reason"].lower()
 
 
 def test_algorithm_first_baseline_gate_advances_into_optimize_anchor(temp_home: Path) -> None:

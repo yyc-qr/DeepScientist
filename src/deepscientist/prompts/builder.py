@@ -1807,6 +1807,7 @@ class PromptBuilder:
         best_branch = dict(frontier.get("best_branch") or {}) if isinstance(frontier.get("best_branch"), dict) else {}
         best_run = dict(frontier.get("best_run") or {}) if isinstance(frontier.get("best_run"), dict) else {}
         backlog = dict(frontier.get("candidate_backlog") or {}) if isinstance(frontier.get("candidate_backlog"), dict) else {}
+        mcts = dict(frontier.get("mcts") or {}) if isinstance(frontier.get("mcts"), dict) else {}
         next_actions = [str(item).strip() for item in (frontier.get("recommended_next_actions") or []) if str(item).strip()]
         stagnant = frontier.get("stagnant_branches") or []
         fusion = frontier.get("fusion_candidates") or []
@@ -1824,10 +1825,25 @@ class PromptBuilder:
             f"- frontier_candidate_briefs: {int(backlog.get('candidate_brief_count') or 0)}",
             f"- frontier_active_implementation_candidates: {int(backlog.get('active_implementation_candidate_count') or 0)}",
             f"- frontier_failed_implementation_candidates: {int(backlog.get('failed_implementation_candidate_count') or 0)}",
+            f"- frontier_mcts_enabled: {bool(mcts.get('enabled'))}",
+            f"- frontier_mcts_reason: {str(mcts.get('reason') or 'not available')}",
             f"- frontier_stagnant_branch_count: {len([item for item in stagnant if isinstance(item, dict)])}",
             f"- frontier_fusion_candidate_count: {len([item for item in fusion if isinstance(item, dict)])}",
             "- optimization_frontier_rule: in algorithm-first work, treat this block as the primary route-selection surface before relying on paper-facing state.",
         ]
+        recommended_candidate_id = str(mcts.get("recommended_candidate_id") or "").strip()
+        if bool(mcts.get("enabled")) and recommended_candidate_id:
+            lines.extend(
+                [
+                    f"- frontier_mcts_recommended_candidate: {recommended_candidate_id}",
+                    f"- frontier_mcts_simulations: {int(mcts.get('simulations') or 0)}",
+                    "- optimization_mcts_rule: prefer the MCTS-recommended candidate for the next bounded validation when its metric contract and execution preconditions still hold. Override it only for new hard evidence, and record the override reason durably.",
+                ]
+            )
+        else:
+            lines.append(
+                "- optimization_mcts_rule: MCTS is not eligible for this frontier; retain the normal explore/exploit/fusion/debug routing rules."
+            )
         if local_attempts:
             parts: list[str] = []
             for item in local_attempts[-3:]:

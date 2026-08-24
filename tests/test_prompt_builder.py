@@ -965,6 +965,8 @@ def test_prompt_builder_supports_optimize_as_standard_stage_skill(temp_home: Pat
     assert "active_anchor: optimize" in prompt
     assert "## Optimization Frontier Snapshot" in prompt
     assert "frontier_mode:" in prompt
+    assert "frontier_mcts_enabled: False" in prompt
+    assert "frontier_mcts_reason:" in prompt
     assert "Continue the optimization loop from the current frontier" in prompt
 
 

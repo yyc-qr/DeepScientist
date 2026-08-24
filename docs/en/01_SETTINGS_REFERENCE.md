@@ -318,6 +318,12 @@ skills:
   sync_global_on_init: true
   sync_quest_on_create: true
   sync_quest_on_open: true
+optimization:
+  mcts:
+    mode: auto
+    simulations: 96
+    exploration_constant: 1.2
+    max_depth: 3
 bootstrap:
   codex_ready: false
   codex_last_checked_at: null
@@ -343,6 +349,18 @@ acp:
   sdk_bridge_enabled: false
   sdk_module: acp
 ```
+
+### Algorithm-first MCTS
+
+`optimization.mcts` controls the local PUCT-MCTS recommendation policy used by
+algorithm-first optimization frontiers.
+
+- `mode`: `auto` (default) enables the policy only when its evidence gate is met; `off` always keeps the existing frontier route rules.
+- `simulations`: deterministic local search budget per frontier refresh. It does not launch experiments or call a model.
+- `exploration_constant`: balances high estimated reward against insufficiently explored candidates.
+- `max_depth`: maximum candidate-lineage depth considered in a rollout.
+
+MCTS is never used for paper-oriented quests. In `auto` mode it also remains disabled unless there are at least three actionable root candidates and two completed candidates with numeric observed reward. Its recommendation is an experiment-priority decision, not a claimed experimental result.
 
 ### Core identity
 

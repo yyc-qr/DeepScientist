@@ -57,6 +57,14 @@ def default_config(home: Path) -> dict:
         "memory": {
             "read_visibility_mode": "independent",
         },
+        "optimization": {
+            "mcts": {
+                "mode": "auto",
+                "simulations": 96,
+                "exploration_constant": 1.2,
+                "max_depth": 3,
+            },
+        },
         "literature": {
             "deepxiv": {
                 "enabled": False,

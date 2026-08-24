@@ -279,6 +279,8 @@ def test_optimize_skill_uses_candidate_graph_and_structured_failure_memory() -> 
     assert "artifact.record_candidate_experiment(...)" in text
     assert "filters={'stage': 'experiment', 'outcome': 'failure'" in text
     assert "candidate_graph_summary" in text
+    assert "PUCT-MCTS" in text
+    assert "frontier['mcts']" in text
 
 
 def test_quest_creation_syncs_enabled_stage_skills(temp_home: Path) -> None:

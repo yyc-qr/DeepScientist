@@ -230,6 +230,23 @@ Do not replace a reusable lesson with a progress artifact.
 
 ## 4. Artifact metric-contract rules
 
+### Algorithm-first PUCT-MCTS recommendation
+
+`artifact.get_optimization_frontier(...)` may include an `mcts` field for an
+algorithm-first quest. It is a local, deterministic PUCT-MCTS ranking of already
+executable implementation candidates. It does not run a command, call a model, or
+turn an estimate into an experimental result.
+
+The policy is enabled only when the frontier has at least three actionable root
+candidates and two completed candidates with numeric observed reward. Its score uses
+recorded reward, candidate cost, repeated failure signatures, an optional documented
+`mcts_prior` between `0` and `1`, and candidate-graph lineage. When disabled, the
+field includes a reason and the normal frontier logic remains in control.
+
+Treat a recommendation as a default validation order, not a bypass of metric,
+baseline, safety, or execution gates. If new hard evidence justifies an override,
+record the reason as an artifact decision.
+
 Use `artifact` as the authoritative submission surface for baseline and main-experiment metrics.
 
 ### `artifact.confirm_baseline(...)`
