@@ -168,14 +168,14 @@ class QwenClient:
         env = qwen_cfg.get("env") if isinstance(qwen_cfg.get("env"), dict) else {}
         resolved_key = str(
             api_key
-            or env.get("QWEN_API_KEY")
             or os.environ.get("QWEN_API_KEY", "")
+            or env.get("QWEN_API_KEY")
         ).strip()
         resolved_base = (
             str(
                 base_url
-                or qwen_cfg.get("base_url")
                 or os.environ.get("QWEN_BASE_URL")
+                or qwen_cfg.get("base_url")
                 or DEFAULT_BASE_URL
             ).strip()
             or DEFAULT_BASE_URL
@@ -183,8 +183,8 @@ class QwenClient:
         resolved_model = (
             str(
                 model
-                or qwen_cfg.get("model")
                 or os.environ.get("QWEN_MODEL")
+                or qwen_cfg.get("model")
                 or DEFAULT_MODEL
             ).strip()
             or DEFAULT_MODEL
@@ -194,8 +194,8 @@ class QwenClient:
         resolved_embedding_model = (
             str(
                 embedding_model
-                or qwen_cfg.get("embedding_model")
                 or os.environ.get("QWEN_EMBEDDING_MODEL")
+                or qwen_cfg.get("embedding_model")
                 or DEFAULT_EMBEDDING_MODEL
             ).strip()
             or DEFAULT_EMBEDDING_MODEL
