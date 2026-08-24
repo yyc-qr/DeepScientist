@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import math
 import re
+from collections import defaultdict
 from collections.abc import Iterable, Mapping
+from datetime import datetime, timezone
 from typing import Any
 
+from rank_bm25 import BM25Okapi
 
 STRUCTURED_MEMORY_FIELDS = (
     "task_family",
@@ -142,7 +145,7 @@ def lexical_score(query: str, *, title: str, excerpt: str, body: str, tags: Any 
     return score, reasons
 
 
-def cosine_similarity(left: Any, right: Any) -> float | None:
+def _optional_cosine_similarity(left: Any, right: Any) -> float | None:
     if not isinstance(left, Iterable) or isinstance(left, (str, bytes, bytearray, Mapping)):
         return None
     if not isinstance(right, Iterable) or isinstance(right, (str, bytes, bytearray, Mapping)):
@@ -184,7 +187,7 @@ def rank_cards(
             body=card.get("body"),
             tags=(card.get("tags") or (card.get("metadata") or {}).get("tags")),
         )
-        similarity = cosine_similarity(query_embedding, metadata.get("embedding"))
+        similarity = _optional_cosine_similarity(query_embedding, metadata.get("embedding"))
         if _text(query) and query_embedding is None:
             query_tokens = _tokens(query)
             searchable_text = " ".join(
@@ -223,3 +226,81 @@ def rank_cards(
         reverse=True,
     )
     return ranked[: max(0, int(limit))]
+def tokenize(text: str) -> list[str]:
+    return str(text or "").lower().split()
+
+
+def cosine_similarity(left: Any, right: Any) -> float:
+    """Return cosine similarity, using zero for missing or invalid vectors."""
+
+    return _optional_cosine_similarity(left, right) or 0.0
+
+
+def reciprocal_rank_fusion(
+    rankings: Iterable[list[str]],
+    *,
+    k: int = 60,
+) -> list[str]:
+    """Fuse multiple ranked id lists with Reciprocal Rank Fusion."""
+    scores: dict[str, float] = defaultdict(float)
+    for ranking in rankings:
+        for rank, node_id in enumerate(ranking):
+            scores[node_id] += 1.0 / (k + rank + 1)
+    return sorted(scores, key=lambda node_id: scores[node_id], reverse=True)
+
+
+def expand_subgraph(
+    graph: Any,
+    anchor_ids: Iterable[str],
+    *,
+    max_hops: int = 2,
+) -> list[str]:
+    """Collect anchor nodes plus their undirected BFS neighborhood."""
+    collected = set(str(anchor) for anchor in anchor_ids)
+    frontier = set(collected)
+    for _ in range(max(0, int(max_hops or 0))):
+        next_frontier: set[str] = set()
+        for node in frontier:
+            for _, neighbor, _data in graph.out_edges(node, data=True):
+                if neighbor not in collected:
+                    next_frontier.add(neighbor)
+            for predecessor, _, _data in graph.in_edges(node, data=True):
+                if predecessor not in collected:
+                    next_frontier.add(predecessor)
+        collected.update(next_frontier)
+        frontier = next_frontier
+        if not frontier:
+            break
+    return sorted(collected)
+
+
+def time_decay_factor(
+    updated_at: str | None,
+    *,
+    now: datetime | None = None,
+    half_life_days: float = 60.0,
+) -> float:
+    """Halve the relevance weight every ``half_life_days`` since the timestamp."""
+    if not updated_at:
+        return 1.0
+    try:
+        parsed = datetime.fromisoformat(str(updated_at))
+    except ValueError:
+        return 1.0
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    resolved_now = now or datetime.now(timezone.utc)
+    if resolved_now.tzinfo is None:
+        resolved_now = resolved_now.replace(tzinfo=timezone.utc)
+    age_days = max((resolved_now - parsed).total_seconds(), 0.0) / 86400.0
+    half_life = float(half_life_days or 1.0)
+    return 0.5 ** (age_days / half_life)
+
+
+def bm25_scores(summaries: list[str], query: str) -> list[float]:
+    """BM25 relevance scores for summaries against one query."""
+    corpus = [tokenize(summary) for summary in summaries]
+    query_tokens = tokenize(query)
+    if not corpus or not query_tokens:
+        return [0.0] * len(summaries)
+    return list(BM25Okapi(corpus).get_scores(query_tokens))

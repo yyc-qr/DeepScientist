@@ -17,7 +17,7 @@ from ..artifact import ArtifactService
 from ..artifact.metrics import MetricContractValidationError
 from ..bash_exec import BashExecService
 from ..evidence_packets import cached_compact_mcp_tool_result, compact_mcp_tool_result
-from ..memory import MemoryService
+from ..memory import MemoryGraphService, MemoryService
 from ..quest import QuestService
 from ..shared import read_json
 from .context import McpContext
@@ -916,8 +916,12 @@ def _build_bash_log_window_from_path(path: Path, *, start: int | None = None, ta
     }
 
 
-def build_memory_server(context: McpContext) -> FastMCP:
+def build_memory_server(
+    context: McpContext,
+    memory_graph: MemoryGraphService | None = None,
+) -> FastMCP:
     service = MemoryService(context.home)
+    graph_service = memory_graph or MemoryGraphService(context.home)
     server = FastMCP(
         "memory",
         instructions=(
@@ -1110,6 +1114,89 @@ def build_memory_server(context: McpContext) -> FastMCP:
         comment: str | dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return service.promote_to_global(card_id=card_id, path=path, quest_root=context.require_quest_root())
+
+    @server.tool(
+        name="graph_sync",
+        description=(
+            "Rebuild or reconcile the knowledge graph from memory cards. "
+            "Call after writing cards when graph_search should see them."
+        ),
+    )
+    def graph_sync(
+        scope: str = "quest",
+        rebuild: bool = False,
+        comment: str | dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        resolved_scope = _resolve_scope(context, scope)
+        quest_root = context.require_quest_root() if resolved_scope == "quest" else None
+        return graph_service.sync_scope(
+            scope=resolved_scope,
+            quest_root=quest_root,
+            rebuild=bool(rebuild),
+        )
+
+    @server.tool(
+        name="graph_search",
+        description=(
+            "Hybrid knowledge graph search: dense + BM25 -> RRF -> BFS subgraph "
+            "expansion -> QWEN re-rank, with contradicts and time-decay weighting. "
+            "Use for discovery chains, failure patterns, and relation-aware retrieval."
+        ),
+        annotations=_read_only_tool_annotations(title="Search memory graph"),
+    )
+    def graph_search(
+        query: str,
+        scope: str = "quest",
+        k: int = 5,
+        anchor_k: int = 10,
+        max_hops: int = 2,
+        comment: str | dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        resolved_scope = _resolve_scope(context, scope)
+        quest_root = context.require_quest_root() if resolved_scope == "quest" else None
+        return graph_service.hybrid_search(
+            query,
+            scope=resolved_scope,
+            quest_root=quest_root,
+            k=k,
+            anchor_k=anchor_k,
+            max_hops=max_hops,
+        )
+
+    @server.tool(
+        name="classify_failure",
+        description=(
+            "Classify a failed experiment via QWEN and record it in the knowledge "
+            "graph. `hypothesis_invalid` marks the idea dead_end and links a "
+            "failure node; other categories stay at the episode level."
+        ),
+    )
+    def classify_failure(
+        idea_id: str,
+        experiment_id: str,
+        summary: str,
+        error: str = "",
+        log_tail: str = "",
+        log_path: str | None = None,
+        category: str | None = None,
+        reason: str = "",
+        scope: str = "quest",
+        comment: str | dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        resolved_scope = _resolve_scope(context, scope)
+        quest_root = context.require_quest_root() if resolved_scope == "quest" else None
+        return graph_service.record_failure(
+            scope=resolved_scope,
+            quest_root=quest_root,
+            idea_id=idea_id,
+            experiment_id=experiment_id,
+            summary=summary,
+            error=error,
+            log_tail=log_tail,
+            log_path=log_path,
+            category=category,
+            reason=reason,
+        )
 
     return server
 

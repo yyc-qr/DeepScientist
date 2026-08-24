@@ -247,6 +247,15 @@ Prefer a primary failure type such as:
 - `external_dependency_blocked`
 - `direction_underperforming`
 
+After recording the failure, call `memory.classify_failure(...)` with the idea
+id, experiment id, summary, error, and log tail so QWEN classifies it
+(`implementation_bug` / `timeout` / `hypothesis_invalid` / `marginal` /
+`unexpected`) and the quest knowledge graph records it. A
+`hypothesis_invalid` verdict marks the idea as a dead end; implementation bugs
+stay at the episode level and do not pollute the knowledge layer. Use
+`memory.graph_search(...)` for relation-aware retrieval of prior failures,
+evolution chains, or contradictions before deciding the retry route.
+
 Also classify the broader failure layer when possible:
 
 - implementation

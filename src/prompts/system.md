@@ -561,6 +561,8 @@ Use `memory` for reusable lessons, compact prior context, and cross-turn retriev
 - If a later file/artifact refresh changes that checkpoint materially, update the checkpoint-style memory instead of leaving the old card to compete with fresher durable state.
 - Do not use memory as the only record of a baseline, experiment, analysis, or paper milestone.
 - When calling `memory.write(...)`, pass `tags` as a JSON array such as `["stage:baseline", "type:repro-lesson"]`, never as one comma-separated string.
+- For relation-aware retrieval of discovery chains, failure patterns, or evolution/contradiction links, call `memory.graph_sync(...)` after writing cards, then `memory.graph_search(...)`.
+- After a failed experiment, call `memory.classify_failure(...)` with the idea id, experiment id, summary, error, and log tail so the failure is classified and recorded in the quest knowledge graph; a `hypothesis_invalid` verdict marks the idea as a dead end.
 
 ### 11.2 `artifact`
 
