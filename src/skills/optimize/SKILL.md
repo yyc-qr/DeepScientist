@@ -129,6 +129,7 @@ Use these three object levels consistently:
    Record one within-line attempt such as one patch, one smoke candidate, one debug candidate, or one fusion candidate.
 
 Use `artifact.record(payload={'kind': 'decision', ...})` when the frontier route changes, a line is promoted, a line is stopped, or the next optimize submode is selected.
+Use `artifact.record(payload={'kind': 'report', report_type: 'optimization_candidate', ...})` only for legacy or branch-local optimization candidate notes that are not better represented by `artifact.record_candidate_experiment(...)`.
 
 ## Optimize submodes
 
@@ -177,6 +178,7 @@ Default heuristics:
 - Do not convert ranking uncertainty into premature branch creation.
 - Do not treat an implementation-level candidate report as a new durable optimization line.
 - Before broad new search, inspect recent optimization memory and the same-line local attempt memory when relevant.
+- Use `memory.search(...)` before repeating a failed mechanism family or reopening stale frontier assumptions.
 - If the same line stalls repeatedly, switch route instead of pretending more of the same is new evidence.
 - Plateau is a route signal, not a reason to keep issuing tiny tweaks.
 

@@ -155,6 +155,7 @@ The review pass should usually leave behind:
 - `paper/review/experiment_todo.md`
 - `paper/paper_experiment_matrix.md` when more evidence is still needed
 - `paper/paper_experiment_matrix.json` when more evidence is still needed
+- `paper/judge/judge_report.md` and `paper/judge/judge_report.json` when model-backed paper judging is configured or requested
 
 Use the templates in `references/` when needed:
 
@@ -203,6 +204,8 @@ Identify:
   - baseline recovery
   - supplementary experiment
   - claim downgrade
+
+If a current paper/report bundle exists and no fresh judge report covers it, call `artifact.judge_paper(...)` unless the user requested a local-only audit or judge configuration is unavailable. If a judge report already exists, read `artifact.get_latest_paper_judge(...)` and treat it as one reviewer signal, not as a substitute for the independent evidence audit.
 
 ### 2. Run a paper-quality literature benchmark
 

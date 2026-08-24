@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://github.com/ResearAI/DeepScientist">GitHub</a> |
   <a href="README_ZH.md">中文文档</a> |
+  <a href="JUDGE_README.md">Judge 中文指南</a> |
   <a href="docs/en/README.md">English Docs</a> |
   <a href="https://openreview.net/forum?id=cZFgsLq8Gs">Paper</a> |
   <a href="https://deepscientist.cc/">Website</a>
@@ -47,6 +48,8 @@
 <p align="center">
   Maintainers: <a href="docs/en/22_BENCHSTORE_YAML_REFERENCE.md">BenchStore YAML Guide</a>
 </p>
+
+> 使用 PDF 论文评判模块：查看根目录的 [Judge 中文快速启动与参数指南](JUDGE_README.md)。
 
 <p align="center">
   <strong>May 12 update:</strong> v1.6.0 is available with Claude Code, OpenCode, Kimi Code, BenchStore, and science evidence workflows.

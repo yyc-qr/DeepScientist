@@ -66,6 +66,8 @@ _BUILTIN_MCP_TOOL_APPROVALS: dict[str, tuple[str, ...]] = {
         "validate_manuscript_coverage",
         "validate_academic_outline",
         "validate_manuscript_language",
+        "judge_paper",
+        "get_latest_paper_judge",
         "compile_outline_to_writing_plan",
         "get_quest_state",
         "get_global_status",

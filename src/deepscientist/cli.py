@@ -16,6 +16,7 @@ from .config import ConfigManager
 from .daemon import DaemonApp
 from .doctor import render_doctor_report, run_doctor
 from .home import default_home, ensure_home_layout, repo_root
+from .judge import PaperJudgeError
 from .memory import MemoryService
 from .migration import migrate_deepscientist_root
 from .network import configure_runtime_proxy, urlopen_with_proxy as urlopen
@@ -25,7 +26,7 @@ from .registries import BaselineRegistry
 from .runners import ClaudeRunner, CodexRunner, KimiRunner, OpenCodeRunner, QwenRunner, RunRequest, get_runner_factory, register_builtin_runners
 from .runtime_tools import RuntimeToolService
 from .runtime_logs import JsonlLogger
-from .shared import ensure_dir, read_json, read_yaml
+from .shared import ensure_dir, read_json, read_yaml, write_json
 from .skills import SkillInstaller
 from .tui import watch_tui
 
@@ -174,6 +175,21 @@ def build_parser() -> argparse.ArgumentParser:
 
     push_parser = subparsers.add_parser("push")
     push_parser.add_argument("quest_id")
+
+    judge_parser = subparsers.add_parser("judge", help="Judge a PDF or text paper with minimal setup.")
+    judge_parser.add_argument("input_path", help="PDF, Markdown, text, LaTeX, or reStructuredText paper path.")
+    judge_parser.add_argument("--quest-id", default=None, help="Reuse an existing quest instead of creating one.")
+    judge_parser.add_argument("--package-type", default="review_package")
+    judge_parser.add_argument(
+        "--judge-profile",
+        default="standalone_pdf",
+        choices=("standalone_pdf", "research_package"),
+        help="Use standalone_pdf for manuscript-only review or research_package for a full Quest package.",
+    )
+    judge_parser.add_argument("--model", default=None, help="Override the judge model.")
+    judge_parser.add_argument("--api-base", default=None, help="Override the OpenAI-compatible API base URL.")
+    judge_parser.add_argument("--api-key-env", default=None, help="Environment variable containing the API key.")
+    judge_parser.add_argument("--dry-run", action="store_true", help="Validate extraction and output without calling an API.")
 
     memory_parser = subparsers.add_parser("memory")
     memory_subparsers = memory_parser.add_subparsers(dest="memory_command", required=True)
@@ -585,6 +601,110 @@ def baseline_list_command(home: Path) -> int:
     return 0
 
 
+def judge_command(
+    home: Path,
+    input_path: str,
+    *,
+    quest_id: str | None = None,
+    package_type: str = "review_package",
+    judge_profile: str = "standalone_pdf",
+    model: str | None = None,
+    api_base: str | None = None,
+    api_key_env: str | None = None,
+    dry_run: bool = False,
+) -> int:
+    source = Path(input_path).expanduser().resolve()
+    if not source.exists() or not source.is_file():
+        print(json.dumps({"ok": False, "message": f"Judge input file does not exist: {source}"}, ensure_ascii=False, indent=2))
+        return 1
+    ensure_home_layout(home)
+    ConfigManager(home).ensure_files()
+    quest_service = QuestService(home, skill_installer=SkillInstaller(repo_root(), home))
+    if quest_id:
+        quest_root = home / "quests" / str(quest_id).strip()
+        if not quest_root.exists() or not quest_root.is_dir():
+            print(json.dumps({"ok": False, "message": f"Quest does not exist: {quest_id}"}, ensure_ascii=False, indent=2))
+            return 1
+        resolved_quest_id = quest_root.name
+    else:
+        snapshot = quest_service.create(
+            goal=f"Judge paper: {source.stem}",
+            startup_contract={"need_research_paper": True},
+        )
+        quest_root = Path(snapshot["quest_root"])
+        resolved_quest_id = str(snapshot["quest_id"])
+
+    paper_root = ensure_dir(quest_root / "paper")
+    suffix = source.suffix.lower()
+    target_name = f"judge_input{suffix}"
+    target = paper_root / target_name
+    if source != target.resolve():
+        shutil.copy2(source, target)
+    target_rel = target.relative_to(quest_root).as_posix()
+    manifest_path = paper_root / "paper_bundle_manifest.json"
+    manifest = read_json(manifest_path, {})
+    manifest = dict(manifest) if isinstance(manifest, dict) else {}
+    manifest.update({"schema_version": 1, "package_type": package_type})
+    if suffix == ".pdf":
+        manifest["pdf_path"] = target_rel
+    else:
+        manifest["draft_path"] = target_rel
+    write_json(manifest_path, manifest)
+
+    try:
+        result = ArtifactService(home).judge_paper(
+            quest_root,
+            target_path=target_rel,
+            package_type=package_type,
+            judge_profile=judge_profile,
+            model=model,
+            api_base=api_base,
+            api_key_env=api_key_env,
+            dry_run=True if dry_run else None,
+        )
+    except (PaperJudgeError, OSError, ValueError, RuntimeError) as exc:
+        details = exc.details if isinstance(exc, PaperJudgeError) else {}
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "quest_id": resolved_quest_id,
+                    "target_path": str(target),
+                    "message": str(exc),
+                    "details": details,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 1
+
+    report = result.get("report") if isinstance(result.get("report"), dict) else {}
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "quest_id": resolved_quest_id,
+                "quest_root": str(quest_root),
+                "target_path": result.get("target_path"),
+                "target_metadata": result.get("target_metadata"),
+                "judge_profile": result.get("judge_profile"),
+                "overall_score": report.get("overall_score"),
+                "confidence": report.get("confidence"),
+                "readiness": report.get("readiness"),
+                "recommended_route": report.get("recommended_route"),
+                "judge_report_path": result.get("judge_report_path"),
+                "judge_json_path": result.get("judge_json_path"),
+                "extraction_manifest_path": result.get("extraction_manifest_path"),
+                "extracted_text_path": result.get("extracted_text_path"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
 def baseline_attach_command(home: Path, quest_id: str, baseline_id: str, variant_id: str | None) -> int:
     result = ArtifactService(home).attach_baseline(home / "quests" / quest_id, baseline_id, variant_id)
     print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -687,6 +807,18 @@ def main(argv: list[str] | None = None) -> int:
         return doctor_command(home, args.runner)
     if args.command == "push":
         return push_command(home, args.quest_id)
+    if args.command == "judge":
+        return judge_command(
+            home,
+            args.input_path,
+            quest_id=args.quest_id,
+            package_type=args.package_type,
+            judge_profile=args.judge_profile,
+            model=args.model,
+            api_base=args.api_base,
+            api_key_env=args.api_key_env,
+            dry_run=args.dry_run,
+        )
     if args.command == "memory" and args.memory_command == "search":
         return memory_search_command(home, args.query)
     if args.command == "baseline" and args.baseline_command == "list":
