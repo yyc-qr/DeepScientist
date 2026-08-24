@@ -313,7 +313,12 @@ def _check_runner(config_manager: ConfigManager, runner_name: str) -> dict[str, 
         "claude": "Claude Code CLI",
         "kimi": "Kimi Code CLI",
         "opencode": "OpenCode CLI",
+        "qwen": "Qwen (通义千问)",
     }.get(normalized_runner, normalized_runner)
+
+    # Qwen runner uses a Python agent script, not a binary CLI
+    if normalized_runner == "qwen":
+        resolved_binary = "qwen_agent.py (Python)"
 
     if not resolved_binary:
         guidance = config_manager._runner_missing_binary_guidance(normalized_runner, runner_cfg)

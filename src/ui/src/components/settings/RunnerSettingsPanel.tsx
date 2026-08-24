@@ -19,7 +19,7 @@ type RunnerField = {
   options?: Array<{ label: string; value: string }>
 }
 
-const RUNNER_ORDER: BuiltinRunnerName[] = ['codex', 'claude', 'kimi', 'opencode']
+const RUNNER_ORDER: BuiltinRunnerName[] = ['codex', 'claude', 'kimi', 'opencode', 'qwen']
 
 const RUNNER_DEFAULTS: Record<BuiltinRunnerName, StructuredConfig> = {
   codex: {
@@ -78,6 +78,19 @@ const RUNNER_DEFAULTS: Record<BuiltinRunnerName, StructuredConfig> = {
     permission_mode: 'allow',
     default_agent: '',
     variant: '',
+    mcp_timeout_ms: 172800000,
+    retry_on_failure: true,
+    retry_max_attempts: 4,
+    retry_initial_backoff_sec: 10,
+    retry_backoff_multiplier: 4,
+    retry_max_backoff_sec: 600,
+    env: {},
+  },
+  qwen: {
+    enabled: false,
+    binary: 'qwen',
+    model: 'qwen-plus',
+    permission_mode: 'allow',
     mcp_timeout_ms: 172800000,
     retry_on_failure: true,
     retry_max_attempts: 4,
@@ -181,6 +194,9 @@ const RUNNER_FIELDS: Record<BuiltinRunnerName, RunnerField[]> = {
     { key: 'default_agent', label: 'Default agent', kind: 'text', description: 'Optional `opencode run --agent` value.' },
     { key: 'variant', label: 'Variant', kind: 'text', description: 'Optional `opencode run --variant` value.' },
     { key: 'mcp_timeout_ms', label: 'MCP startup timeout (ms)', kind: 'number', description: 'OpenCode MCP tool-discovery timeout; this is not tool execution timeout.' },
+  ],
+  qwen: [
+    { key: 'model', label: 'Model', kind: 'text', description: 'Qwen model name (qwen-plus, qwen-max, qwen-turbo).' },
   ],
 }
 

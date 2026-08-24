@@ -9,6 +9,7 @@ __all__ = [
     "CodexRunner",
     "KimiRunner",
     "OpenCodeRunner",
+    "QwenRunner",
     "RunRequest",
     "RunResult",
     "get_runner_factory",
@@ -37,6 +38,10 @@ def __getattr__(name: str):
         from .kimi import KimiRunner
 
         return KimiRunner
+    if name == "QwenRunner":
+        from .qwen import QwenRunner
+
+        return QwenRunner
     if name == "register_builtin_runners":
         from .builtins import register_builtin_runners
 
