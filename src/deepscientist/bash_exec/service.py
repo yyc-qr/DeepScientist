@@ -52,7 +52,15 @@ def _atomic_write_json(path: Path, payload: Any) -> None:
     ) as handle:
         handle.write(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=False) + "\n")
         temp_path = Path(handle.name)
-    temp_path.replace(path)
+    for attempt in range(3):
+        try:
+            temp_path.replace(path)
+            return
+        except PermissionError:
+            if attempt == 2:
+                temp_path.unlink(missing_ok=True)
+                raise
+            time.sleep(0.05 * (attempt + 1))
 
 
 def _count_jsonl_records(path: Path) -> int:

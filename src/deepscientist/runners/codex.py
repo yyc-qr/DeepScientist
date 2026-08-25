@@ -1602,8 +1602,9 @@ class CodexRunner:
         lines = [
             f"[mcp_servers.{name}]",
             'transport = "stdio"',
-            f'command = "{sys.executable}"',
+            f"command = {json.dumps(sys.executable)}",
             f"args = [{', '.join(json.dumps(item) for item in args)}]",
+            "startup_timeout_sec = 30",
         ]
         if tool_timeout_sec is not None:
             value = int(tool_timeout_sec) if float(tool_timeout_sec).is_integer() else float(tool_timeout_sec)

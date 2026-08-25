@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import deepscientist.bash_exec.service as bash_exec_service
 from deepscientist.config import ConfigManager
 from deepscientist.bash_exec.service import BashExecService
 from deepscientist.shared import ensure_dir
@@ -168,3 +169,22 @@ def test_hardware_env_overrides_follow_selected_gpu_config(temp_home: Path) -> N
     assert overrides["CUDA_VISIBLE_DEVICES"] == "1,3"
     assert overrides["NVIDIA_VISIBLE_DEVICES"] == "1,3"
     assert overrides["ROCR_VISIBLE_DEVICES"] == "1,3"
+
+
+def test_atomic_write_json_retries_transient_permission_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "meta.json"
+    original_replace = Path.replace
+    attempts = 0
+
+    def replace_once_blocked(source: Path, target: Path) -> Path:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise PermissionError("transient sharing violation")
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", replace_once_blocked)
+    bash_exec_service._atomic_write_json(path, {"status": "completed"})
+
+    assert attempts == 2
+    assert path.read_text(encoding="utf-8") == '{\n  "status": "completed"\n}\n'

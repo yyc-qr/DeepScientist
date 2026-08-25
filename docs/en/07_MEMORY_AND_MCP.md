@@ -300,6 +300,8 @@ bash_exec.bash_exec(mode="await", id="<bash_id>", wait_timeout_seconds=1800)
 
 If that bounded `await` returns while the session is still `running`, the process keeps going in the background. Read the saved log, judge real forward progress, and then decide whether another `1800s` wait is warranted. Use `kill` only when the quest truly needs to stop the session.
 
+When a foreground `await` command has reached a terminal status, its result includes a bounded log preview. This lets agents use short command output directly while preserving the complete durable log for later inspection.
+
 ## 6. Prompt-level expectations
 
 The agent should normally follow this discipline:

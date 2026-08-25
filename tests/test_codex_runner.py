@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import tomllib
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -688,11 +690,14 @@ def test_codex_runner_injects_builtin_mcp_tool_approval_overrides(temp_home) -> 
     assert 'transport = "stdio"' in config_text
     assert "[mcp_servers.artifact.tools.get_quest_state]" in config_text
     assert "[mcp_servers.memory.tools.list_recent]" in config_text
-    assert f'DEEPSCIENTIST_REPO_ROOT = "{str(temp_home)}"' in config_text
+    assert f"DEEPSCIENTIST_REPO_ROOT = {json.dumps(str(temp_home))}" in config_text
     assert 'PYTHONIOENCODING = "utf-8"' in config_text
     assert 'PYTHONUTF8 = "1"' in config_text
     assert "[mcp_servers.bash_exec.tools.bash_exec]" in config_text
+    assert f"command = {json.dumps(sys.executable)}" in config_text
+    assert "startup_timeout_sec = 30" in config_text
     assert config_text.count('approval_mode = "approve"') >= 3
+    assert tomllib.loads(config_text)
 
 
 def test_codex_runner_restricts_settings_issue_profile_to_issue_tool_and_bash_exec_only(temp_home) -> None:  # type: ignore[no-untyped-def]

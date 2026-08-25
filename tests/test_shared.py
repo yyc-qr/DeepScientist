@@ -106,6 +106,7 @@ def test_run_command_hides_windows_console(monkeypatch, tmp_path: Path) -> None:
     assert captured["kwargs"] == {
         "cwd": str(tmp_path),
         "check": False,
+        "stdin": subprocess.DEVNULL,
         "text": True,
         "encoding": "utf-8",
         "errors": "replace",
@@ -139,6 +140,7 @@ def test_run_command_bytes_hides_windows_console(monkeypatch, tmp_path: Path) ->
     assert captured["kwargs"] == {
         "cwd": str(tmp_path),
         "check": False,
+        "stdin": subprocess.DEVNULL,
         "text": False,
         "capture_output": True,
         "creationflags": 1536,

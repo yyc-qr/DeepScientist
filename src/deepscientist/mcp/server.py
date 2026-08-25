@@ -2965,14 +2965,16 @@ def build_bash_exec_server(context: McpContext) -> FastMCP:
         )
 
         def build_await_payload(session: dict[str, Any], *, wait_timeout: int | None) -> dict[str, Any]:
+            session_status = str(session.get("status") or "").strip().lower()
             payload = service.build_tool_result(
                 context,
                 session=session,
-                include_log=False,
+                # Completed foreground commands expose a bounded preview so agents can
+                # use their output without issuing an identical follow-up read.
+                include_log=session_status in BASH_EXEC_TERMINAL_STATUSES,
                 export_log=export_log,
                 export_log_to=export_log_to,
             )
-            session_status = str(session.get("status") or "").strip().lower()
             if wait_timeout is not None and session_status not in BASH_EXEC_TERMINAL_STATUSES:
                 payload.update(
                     _build_bash_exec_wait_notice(

@@ -279,6 +279,8 @@ bash_exec.bash_exec(mode="await", id="<bash_id>", wait_timeout_seconds=1800)
 
 如果这个有界 `await` 返回时 session 仍然是 `running`，说明进程还在后台继续跑。此时先读取保存的日志、判断是否存在真实前进，再决定是否还要继续等下一个 `1800s` 窗口。只有在确实需要停止时才使用 `kill`。
 
+当前台 `await` 命令已到达终态时，返回结果会附带受限的日志预览。这样 agent 可以直接使用短命令输出，同时仍保留完整的持久日志供后续检查。
+
 ## 6. Prompt 级纪律（建议）
 
 通常推荐遵循：

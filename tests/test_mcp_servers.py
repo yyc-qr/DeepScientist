@@ -2451,6 +2451,44 @@ def test_bash_exec_mcp_server_supports_detach_read_list_and_kill(temp_home: Path
     asyncio.run(scenario())
 
 
+def test_bash_exec_await_returns_completed_command_output(temp_home: Path) -> None:
+    async def scenario() -> None:
+        ensure_home_layout(temp_home)
+        ConfigManager(temp_home).ensure_files()
+        quest = QuestService(temp_home, skill_installer=SkillInstaller(repo_root(), temp_home)).create("await output quest")
+        quest_root = Path(quest["quest_root"])
+        context = McpContext(
+            home=temp_home,
+            quest_id=quest["quest_id"],
+            quest_root=quest_root,
+            run_id="run-await-output",
+            active_anchor="baseline",
+            conversation_id=f"quest:{quest['quest_id']}",
+            agent_role="pi",
+            worker_id="worker-main",
+            worktree_root=None,
+            team_mode="single",
+        )
+        server = build_bash_exec_server(context)
+
+        result = _unwrap_tool_result(
+            await server.call_tool(
+                "bash_exec",
+                {
+                    "command": 'python -c "print(\'await-visible-output\')"',
+                    "mode": "await",
+                    "timeout_seconds": 30,
+                },
+            )
+        )
+
+        assert result["status"] == "completed"
+        assert "await-visible-output" in result["log"]
+        assert result["log_truncated"] is False
+
+    asyncio.run(scenario())
+
+
 def test_bash_exec_sleep_protocol_supports_sleep_and_existing_session_waits(temp_home: Path) -> None:
     async def scenario() -> None:
         ensure_home_layout(temp_home)
