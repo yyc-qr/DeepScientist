@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useReducedMotion } from 'framer-motion'
 import { FolderOpen, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CreateCopilotProjectDialog } from '@/components/projects/CreateCopilotProjectDialog'
@@ -20,16 +19,11 @@ import { runtimeVersion } from '@/lib/runtime/quest-runtime'
 import { normalizeBuiltinRunnerName, runnerLabel } from '@/lib/runnerBranding'
 import type { StartResearchTemplate } from '@/lib/startResearch'
 import type { QuestMessageAttachmentDraft } from '@/lib/hooks/useQuestMessageAttachments'
-import { getHeroBundle } from './hero-content'
 import type { ConnectorAvailabilitySnapshot, QuestSummary } from '@/types'
 import type { BenchEntry, BenchSetupPacket } from '@/lib/types/benchstore'
 import { EntryCoachDialog } from './EntryCoachDialog'
-import HeroNav from './HeroNav'
-import HeroScene from './HeroScene'
-import HeroProgress from './HeroProgress'
 import { UpdateReminderDialog } from './UpdateReminderDialog'
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
 export type LandingDialogRequest = 'quests' | 'copilot' | 'autonomous' | 'benchstore'
 
@@ -165,7 +159,6 @@ export default function Hero(props: {
 }) {
   const navigate = useNavigate()
   const { locale } = useI18n()
-  const hero = useMemo(() => getHeroBundle(locale), [locale])
   const saveLanguagePreference = useUILanguageStore((state) => state.saveLanguagePreference)
   const {
     hydrated: onboardingHydrated,
@@ -183,15 +176,10 @@ export default function Hero(props: {
     neverShowAgain: state.neverShowAgain,
   }))
   const heroRef = useRef<HTMLElement | null>(null)
-  const prefersReducedMotion = useReducedMotion()
-  const reducedMotion = prefersReducedMotion ?? false
-  const [progress, setProgress] = useState(0)
-  const isMobile = useMobileViewport()
   const isPortraitMode = useMobileViewport()
-  const [showProgress, setShowProgress] = useState(true)
-  const progressRef = useRef(0)
-  const targetRef = useRef(0)
-  const rafRef = useRef<number | null>(null)
+  const [globeRotation, setGlobeRotation] = useState(0)
+  const globeRafRef = useRef<number | null>(null)
+  const lastGlobeFrameRef = useRef<number | null>(null)
   const [activeDialog, setActiveDialog] = useState<ActiveLandingDialog>(null)
 
   useEffect(() => {
@@ -368,8 +356,8 @@ export default function Hero(props: {
         typeof args.setupPacket.launch_payload.startup_contract.benchstore_context === 'object'
           ? args.setupPacket.launch_payload.startup_contract.benchstore_context
           : args.source === 'benchstore'
-            ? buildBenchstoreContextFromEntry(args.entry)
-            : null
+            ? buildBenchstoreContextFromEntry(args.entry, 'Setup Agent')
+: null
 
       const uploadAttachmentDrafts = async (questId: string) => {
         const uploadedDraftIds: string[] = []
@@ -467,69 +455,41 @@ export default function Hero(props: {
     (shouldShowConnectorCoach || shouldShowTutorialCoach)
 
   useEffect(() => {
-    if (isPortraitMode) {
-      targetRef.current = 0
-      progressRef.current = 0
-      setProgress(0)
-      setShowProgress(false)
-      return
+    const tick = (timestamp: number) => {
+      const previous = lastGlobeFrameRef.current ?? timestamp
+      const delta = Math.min(timestamp - previous, 48)
+      lastGlobeFrameRef.current = timestamp
+
+      if (!landingModalOpen && !entryCoachOpen) {
+        setGlobeRotation((current) => current + delta * 0.018)
+      }
+
+      globeRafRef.current = requestAnimationFrame(tick)
     }
 
-    setShowProgress(true)
-
-    const tick = () => {
-      const target = targetRef.current
-      const current = progressRef.current
-      const next = reducedMotion ? target : current + (target - current) * 0.12
-
-      progressRef.current = next
-      setProgress(next)
-
-      if (Math.abs(target - next) > 0.001) {
-        rafRef.current = requestAnimationFrame(tick)
-      } else {
-        rafRef.current = null
-      }
-    }
-
-    const scheduleTick = () => {
-      if (rafRef.current === null) {
-        rafRef.current = requestAnimationFrame(tick)
-      }
-    }
-
-    const handleWheel = (event: WheelEvent) => {
-      if (landingModalOpen || entryCoachOpen) {
-        return
-      }
-      if (Math.abs(event.deltaY) < 0.5) {
-        return
-      }
-      event.preventDefault()
-      const delta = event.deltaY
-      const nextTarget = clamp(targetRef.current + delta * 0.0012, 0, 1)
-      targetRef.current = nextTarget
-      scheduleTick()
-    }
-
-    window.addEventListener('wheel', handleWheel, { passive: false })
+    globeRafRef.current = requestAnimationFrame(tick)
 
     return () => {
-      window.removeEventListener('wheel', handleWheel)
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-      rafRef.current = null
+      if (globeRafRef.current !== null) {
+        cancelAnimationFrame(globeRafRef.current)
+      }
+      globeRafRef.current = null
+      lastGlobeFrameRef.current = null
     }
-  }, [entryCoachOpen, landingModalOpen, reducedMotion, isPortraitMode])
+  }, [entryCoachOpen, landingModalOpen])
 
-  const scrollStage = useMemo(() => {
-    if (progress < 0.25) return 0
-    if (progress < 0.5) return 1
-    if (progress < 0.75) return 2
-    return 3
-  }, [progress])
+  useEffect(() => {
+    const handleGlobeWheel = (event: WheelEvent) => {
+      if (landingModalOpen || entryCoachOpen) return
+      setGlobeRotation((current) => current + event.deltaY * 0.16)
+    }
 
-  const sceneStageIndex = scrollStage
-  const barProgress = progress
+    window.addEventListener('wheel', handleGlobeWheel, { passive: true })
+    return () => {
+      window.removeEventListener('wheel', handleGlobeWheel)
+    }
+  }, [entryCoachOpen, landingModalOpen])
+
 
   useEffect(() => {
     const htmlStyle = document.documentElement.style
@@ -540,7 +500,7 @@ export default function Hero(props: {
     const previousBodyOverflowX = bodyStyle.overflowX
     const previousBodyOverflowY = bodyStyle.overflowY
 
-    const shouldLockBackground = landingModalOpen || entryCoachOpen || !isPortraitMode
+    const shouldLockBackground = landingModalOpen || entryCoachOpen
     htmlStyle.overflowX = 'hidden'
     htmlStyle.overflowY = shouldLockBackground ? 'hidden' : 'auto'
     bodyStyle.overflow = shouldLockBackground ? 'hidden' : 'auto'
@@ -559,119 +519,314 @@ export default function Hero(props: {
   return (
     <>
       <div
-        className="relative min-h-[100svh] overflow-x-hidden bg-[#F5F2EC] text-[#2D2A26]"
+        className="relative min-h-[100svh] overflow-x-hidden text-white"
         style={{
-          backgroundImage:
-            'radial-gradient(900px circle at 15% 15%, rgba(185, 199, 214, 0.28), transparent 60%), radial-gradient(700px circle at 85% 0%, rgba(215, 198, 174, 0.32), transparent 58%), linear-gradient(180deg, #F5F2EC 0%, #EEE7DD 60%, #F5F2EC 100%)',
+          background:
+            'radial-gradient(circle at 18% 18%, rgba(59,130,246,0.28), transparent 34%), radial-gradient(circle at 82% 16%, rgba(139,92,246,0.26), transparent 30%), radial-gradient(circle at 72% 84%, rgba(34,211,238,0.12), transparent 34%), linear-gradient(135deg, #050B18 0%, #0C1734 44%, #21124A 100%)',
         }}
       >
-        <HeroNav onOpenBenchStore={openBenchStoreDialog} />
+        {/* Global sci-tech background */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-[0.15]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
+              backgroundSize: '42px 42px',
+            }}
+          />
+          <div className="absolute -left-28 top-20 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
+          <div className="absolute -right-24 top-10 h-80 w-80 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="absolute bottom-[-120px] left-[38%] h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
+        </div>
+
+        {/* Completely redesigned top navigation */}
+        <header className="relative z-40 border-b border-white/10 bg-[#07101f]/55 backdrop-blur-2xl">
+          <div className="mx-auto flex h-[68px] w-full max-w-[94vw] items-center justify-between px-4 md:px-5">
+          <button
+  type="button"
+  className="flex items-center gap-3 text-left"
+  onClick={() => navigate('/')}
+>
+  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 shadow-[0_0_30px_rgba(34,211,238,0.12)]">
+    <Sparkles className="h-5 w-5 text-cyan-200" />
+  </div>
+
+  <div>
+    <div className="text-sm font-semibold tracking-[0.08em] text-white">
+      AI SCIENTIST
+    </div>
+
+    <div className="text-[10px] uppercase tracking-[0.28em] text-blue-200/55">
+      Research Intelligence
+    </div>
+  </div>
+</button>
+         <nav className="hidden items-center gap-2 md:flex">
+  <button
+    type="button"
+    className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-slate-200 transition hover:bg-white/[0.12]"
+    onClick={() => {
+      void saveLanguagePreference(locale === 'zh' ? 'en' : 'zh-CN')
+    }}
+  >
+    {locale === 'zh' ? 'English' : '中文'}
+  </button>
+
+  <button
+    type="button"
+    className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-slate-200 transition hover:bg-white/[0.12]"
+    onClick={() => startTutorial(locale, '/', 'auto')}
+  >
+    {locale === 'zh' ? '教程' : 'Tutorial'}
+  </button>
+
+  <button
+    type="button"
+    className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-slate-200 transition hover:bg-white/[0.12]"
+    onClick={() => navigate('/docs')}
+  >
+    {locale === 'zh' ? '文档' : 'Docs'}
+  </button>
+
+  <button
+    type="button"
+    className="rounded-xl border border-blue-300/20 bg-blue-400/10 px-4 py-2 text-sm text-blue-100 transition hover:bg-blue-400/20"
+    onClick={openBenchStoreDialog}
+  >
+    BenchStore
+  </button>
+
+  <button
+    type="button"
+    className="rounded-xl border border-violet-300/20 bg-violet-400/10 px-4 py-2 text-sm text-violet-100 transition hover:bg-violet-400/20"
+    onClick={() => navigate('/settings')}
+  >
+    {locale === 'zh' ? '设置' : 'Settings'}
+  </button>
+</nav>
+          </div>
+        </header>
 
         <section
           ref={heroRef}
-          className="relative min-h-[100svh]"
+          className="relative z-10"
         >
-          <div className="relative flex min-h-[100svh] items-start lg:min-h-screen">
-            <div className="mx-auto w-full max-w-[90vw] px-6 pb-16 pt-10 lg:pb-24">
+          <div className="mx-auto grid min-h-[calc(100svh-68px)] w-full max-w-[97vw] grid-cols-1 items-stretch gap-4 px-3 py-3 md:px-4 lg:grid-cols-[2fr_3fr] lg:gap-4 lg:py-4">
+            {/* Left glass panel */}
+            <FadeContent duration={0.6} y={18} blur={false} className="min-w-0">
               <div
-                className={`grid grid-cols-1 items-start gap-12 ${
-                  isPortraitMode ? '' : 'lg:grid-cols-[0.9fr_1.6fr]'
-                }`}
+                className="relative flex h-full min-h-[620px] flex-col overflow-hidden rounded-[24px] border border-white/15 bg-[#07111f]/58 p-6 shadow-[0_28px_80px_-32px_rgba(0,0,0,0.72)] backdrop-blur-2xl"
+                data-onboarding-id="landing-hero"
               >
-                <FadeContent duration={0.6} y={18} blur={false} className="min-w-0">
-                  <div className="space-y-6" data-onboarding-id="landing-hero">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/60 px-3 py-1 text-xs uppercase tracking-[0.2em] text-[#7E8B97]">
-                      {locale === 'zh' ? '自动化科研' : 'Automated Research'}
-                    </div>
-                    <h1 className="text-4xl font-semibold leading-tight md:text-5xl">
-                      {hero.copy.headline}
-                    </h1>
-                    {hero.copy.subhead ? (
-                      <p className="max-w-xl text-base text-[#5D5A55] md:text-lg">
-                        {hero.copy.subhead}
-                      </p>
-                    ) : null}
-                    <div className="text-sm uppercase tracking-[0.22em] text-[#9FB1C2]">
-                      {hero.copy.tagline}
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent" />
+                <div className="pointer-events-none absolute -right-20 -top-24 h-52 w-52 rounded-full bg-blue-400/12 blur-3xl" />
+
+                <div className="relative z-10 flex h-full flex-col">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/[0.07] px-3.5 py-1.5 text-[11px] uppercase tracking-[0.18em] text-cyan-100">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {locale === 'zh' ? 'AI SCIENTIST · 智能科研平台' : 'AI SCIENTIST · RESEARCH PLATFORM'}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3" data-onboarding-id="landing-entry-actions">
-                      <GlareHover className="rounded-full">
-                        <Button
-                          className="h-12 rounded-full bg-[#C7AD96] px-7 text-[#2D2A26] shadow-[0_12px_28px_-14px_rgba(45,42,38,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#D7C6AE]"
-                          onClick={() => {
-                            window.setTimeout(() => {
-                              setActiveDialog('autonomous')
-                            }, 120)
-                          }}
-                          data-onboarding-id="landing-start-research"
-                        >
-                          {hero.copy.primaryCta}
-                        </Button>
-                      </GlareHover>
-                      <Button
-                        variant="outline"
-                        className="h-11 rounded-full border-black/15 bg-white/70 px-6 text-[#2D2A26] hover:bg-white"
-                        onClick={() => setActiveDialog('quests')}
+                    <div className="mt-5 space-y-3">
+                    <p className="text-[12px] uppercase tracking-[0.18em] text-cyan-200/75 md:text-[13px]">
+                      QWEN · MULTI-AGENT · SCIENTIFIC DISCOVERY
+                    </p>
+                    <h1 className="max-w-lg text-[30px] font-semibold leading-[1.12] tracking-tight text-white md:text-[40px]">
+                      {locale === 'zh'
+                        ? '面向科学发现的智能研究系统'
+                        : 'Intelligent Research for Scientific Discovery'}
+                    </h1>
+                    <p className="max-w-lg text-[13px] leading-6 text-slate-200/78">
+                      {locale === 'zh'
+                        ? '融合文献检索、科研记忆、假设生成、智能审辩与实验规划，构建从科研问题到可验证科学假设的完整闭环。'
+                        : 'Integrating literature retrieval, scientific memory, hypothesis generation, agent critique and experiment planning into one verifiable research loop.'}
+                    </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {[
+                      locale === 'zh' ? '文献检索' : 'Literature',
+                      locale === 'zh' ? '科研记忆' : 'Memory',
+                      locale === 'zh' ? '假设生成' : 'Hypothesis',
+                      locale === 'zh' ? '多智能体审辩' : 'Multi-Agent',
+                      locale === 'zh' ? '实验规划' : 'Experiment',
+                    ].map((item) => (
+                      <span
+                        key={item}
+                        className="rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] text-slate-200"
                       >
-                        <FolderOpen className="mr-2 h-4 w-4" />
-                        {hero.copy.secondaryCta}
-                      </Button>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div
+                    className="mt-5 grid grid-cols-2 gap-2.5"
+                    data-onboarding-id="landing-entry-actions"
+                  >
+                    <GlareHover className="col-span-2 rounded-xl">
                       <Button
-                        variant="outline"
-                        className="h-11 rounded-full border-black/15 bg-[rgba(246,241,235,0.86)] px-6 text-[#2D2A26] shadow-[0_16px_36px_-24px_rgba(57,52,46,0.45)] hover:bg-white"
-                        onClick={openBenchStoreDialog}
-                        data-onboarding-id="landing-benchstore"
+                        className="h-11 w-full rounded-xl border border-blue-200/20 bg-gradient-to-r from-blue-500 to-violet-500 px-6 text-white shadow-[0_14px_34px_-14px_rgba(81,108,255,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
+                        onClick={() => {
+                          window.setTimeout(() => {
+                            setActiveDialog('autonomous')
+                          }, 120)
+                        }}
+                        data-onboarding-id="landing-start-research"
                       >
                         <Sparkles className="mr-2 h-4 w-4" />
-                        BenchStore
+                        {locale === 'zh' ? '启动科研任务' : 'Start Research'}
                       </Button>
-                    </div>
+                    </GlareHover>
 
-                    <div className="space-y-1 text-xs text-[#7E8B97]">
-                      <div>{hero.copy.supportLine}</div>
-                      <div>
-                        {hero.copy.moreContentLine}{' '}
-                        <a
-                          href={hero.copy.moreContentUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline decoration-[#9FB1C2] underline-offset-4 transition-colors hover:text-[#5D5A55]"
-                        >
-                          {hero.copy.moreContentUrl}
-                        </a>
-                        .
+                    <Button
+                      variant="outline"
+                      className="h-10 w-full rounded-xl border-white/15 bg-white/[0.07] px-4 text-white backdrop-blur-xl hover:bg-white/[0.13] hover:text-white"
+                      onClick={() => setActiveDialog('quests')}
+                    >
+                      <FolderOpen className="mr-2 h-4 w-4" />
+                      {locale === 'zh' ? '查看研究任务' : 'View Quests'}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="h-10 w-full rounded-xl border-white/15 bg-white/[0.07] px-4 text-white backdrop-blur-xl hover:bg-white/[0.13] hover:text-white"
+                      onClick={openBenchStoreDialog}
+                      data-onboarding-id="landing-benchstore"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      BenchStore
+                    </Button>
+                  </div>
+
+                  <div className="mt-auto grid grid-cols-2 gap-2.5 pt-5 sm:grid-cols-4">
+                    {[
+                      ['01', locale === 'zh' ? '问题理解' : 'Problem'],
+                      ['02', locale === 'zh' ? '知识整合' : 'Knowledge'],
+                      ['03', locale === 'zh' ? '假设生成' : 'Hypothesis'],
+                      ['04', locale === 'zh' ? '实验验证' : 'Experiment'],
+                    ].map(([index, label]) => (
+                      <div
+                        key={index}
+                        className="rounded-xl border border-white/10 bg-black/10 px-3 py-2"
+                      >
+                        <div className="text-[10px] tracking-[0.2em] text-blue-200/55">{index}</div>
+                        <div className="mt-1 text-xs text-white md:text-sm">{label}</div>
                       </div>
-                      {currentVersion ? <div>{`DeepScientist v${currentVersion}`}</div> : null}
+                    ))}
+                  </div>
+
+                  <div className="mt-4 border-t border-white/10 pt-3 text-[11px] leading-5 text-slate-300/55">
+                    <div>
+                      {locale === 'zh'
+                        ? '基于 DeepScientist 科研工作流，面向国产大模型与科学假设生成赛题进行系统适配。'
+                        : 'Built on the DeepScientist workflow and adapted for Qwen-based scientific hypothesis generation.'}
+                    </div>
+                    {currentVersion ? <div className="mt-0.5">{`DeepScientist v${currentVersion}`}</div> : null}
+                  </div>
+                </div>
+              </div>
+            </FadeContent>
+
+            {/* Right: real Earth research HUD */}
+            {!isPortraitMode ? (
+              <div className="relative min-w-0">
+                <div className="relative h-full min-h-[620px] overflow-hidden rounded-[24px] border border-white/10 bg-[#020711]/88 shadow-[0_28px_90px_-34px_rgba(0,0,0,0.85)]">
+                  <div
+                    className="absolute inset-0 opacity-25"
+                    style={{
+                      backgroundImage:
+                        'linear-gradient(rgba(56,189,248,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.08) 1px, transparent 1px)',
+                      backgroundSize: '54px 54px',
+                    }}
+                  />
+
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_44%,rgba(37,99,235,0.18),transparent_30%),radial-gradient(circle_at_78%_58%,rgba(139,92,246,0.16),transparent_35%)]" />
+
+                  <div className="absolute left-6 top-5 z-20">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-blue-200/45">
+                      Scientific Knowledge Network
+                    </div>
+                    <div className="mt-1 text-lg font-medium text-white">
+                      {locale === 'zh' ? '智能科研知识网络' : 'Intelligent Research Network'}
                     </div>
                   </div>
-                </FadeContent>
 
-                {!isPortraitMode ? (
-                  <div className="relative min-w-0">
-                    <HeroScene
-                      progress={progress}
-                      stageIndex={sceneStageIndex}
-                      reducedMotion={reducedMotion}
-                      isMobile={isMobile}
-                    />
+                  <div className="absolute right-6 top-5 z-20 flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] text-emerald-200">
+                    <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]" />
+                    ONLINE
                   </div>
-                ) : null}
+
+                  {/* outer orbital rings */}
+                  <div
+                    className="absolute left-[60%] top-[54%] h-[82%] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-blue-300/14 transition-transform duration-100"
+                    style={{ transform: `translate(-50%, -50%) rotate(${globeRotation * 0.03}deg)` }}
+                  />
+                  <div
+                    className="absolute left-[60%] top-[54%] h-[72%] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-cyan-300/20 transition-transform duration-100"
+                    style={{ transform: `translate(-50%, -50%) rotate(${18 + globeRotation * 0.05}deg)` }}
+                  />
+                  <div
+                    className="absolute left-[60%] top-[54%] h-[60%] w-[94%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-violet-300/20 transition-transform duration-100"
+                    style={{ transform: `translate(-50%, -50%) rotate(${-16 + globeRotation * 0.04}deg)` }}
+                  />
+
+                  {/* Real Earth */}
+                  <div
+                    className="absolute left-[60%] top-[55%] h-[64%] aspect-square -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border border-blue-200/40 shadow-[0_0_55px_rgba(37,99,235,0.48),0_0_100px_rgba(56,189,248,0.16)] transition-transform duration-100"
+                    style={{
+                      transform: `translate(-50%, -50%) rotate(${globeRotation * 0.18}deg)`,
+                    }}
+                  >
+                    <img
+                      src={`${import.meta.env.BASE_URL}earth.jpg`}
+                      alt="Earth"
+                      className="h-full w-full object-cover"
+                      draggable={false}
+                    />
+                    <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_34%_28%,rgba(255,255,255,0.16),transparent_18%),linear-gradient(90deg,rgba(2,6,23,0.05),rgba(2,6,23,0.38))]" />
+                  </div>
+
+                  {/* connection streaks */}
+                  <div className="absolute left-[25%] top-[39%] h-px w-[54%] rotate-[7deg] bg-gradient-to-r from-cyan-300/0 via-cyan-200/45 to-cyan-300/0" />
+                  <div className="absolute left-[39%] top-[68%] h-px w-[42%] rotate-[-14deg] bg-gradient-to-r from-blue-300/0 via-blue-200/42 to-violet-300/0" />
+
+                  {/* modules */}
+                  <div className="absolute left-[13.2%] top-[38%] z-20 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-cyan-200 shadow-[0_0_18px_rgba(165,243,252,0.95)]" />
+                  <div className="absolute left-[15%] top-[38%] z-20 -translate-y-1/2 rounded-2xl border border-cyan-300/30 bg-[#061324]/86 px-4 py-3 backdrop-blur-xl shadow-[0_0_28px_rgba(34,211,238,0.10)]">
+                    <div className="text-[9px] tracking-[0.18em] text-cyan-200/55">MODULE 01</div>
+                    <div className="mt-1 text-sm font-medium text-white">SEARCH</div>
+                    <div className="mt-1 text-[11px] text-slate-300/60">{locale === 'zh' ? '文献检索与信息发现' : 'Literature discovery'}</div>
+                  </div>
+
+                  <div className="absolute right-[4%] top-[25%] z-20 rounded-2xl border border-violet-300/25 bg-[#1a0c31]/82 px-4 py-3 backdrop-blur-xl">
+                    <div className="text-[9px] tracking-[0.18em] text-violet-200/55">MODULE 02</div>
+                    <div className="mt-1 text-sm font-medium text-white">MEMORY</div>
+                    <div className="mt-1 text-[11px] text-slate-300/60">{locale === 'zh' ? '科研记忆与知识沉淀' : 'Scientific memory'}</div>
+                  </div>
+
+                  <div className="absolute bottom-[11%] right-[7%] z-20 rounded-2xl border border-cyan-300/25 bg-[#062231]/82 px-4 py-3 backdrop-blur-xl">
+                    <div className="text-[9px] tracking-[0.18em] text-cyan-200/55">MODULE 03</div>
+                    <div className="mt-1 text-sm font-medium text-white">EVALUATION</div>
+                    <div className="mt-1 text-[11px] text-slate-300/60">{locale === 'zh' ? '价值评价与智能审辩' : 'Value evaluation'}</div>
+                  </div>
+
+                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-center">
+                    <div className="text-[9px] uppercase tracking-[0.16em] text-blue-200/45">
+                      AUTO ROTATE · SCROLL TO EXPLORE
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-300/45">
+                      {locale === 'zh' ? '地球自动旋转 · 滚动鼠标可加速' : 'Auto rotating Earth · scroll to accelerate'}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            {!isPortraitMode ? (
-              <HeroProgress
-                progress={barProgress}
-                stageIndex={scrollStage}
-                locale={locale}
-                className={`relative mt-8 w-full transition-opacity duration-300 lg:fixed lg:bottom-4 lg:left-0 lg:right-0 lg:mt-0 lg:z-[60] ${
-                  showProgress ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
             ) : null}
           </div>
         </section>
-
       </div>
 
       <OpenQuestDialog
@@ -843,8 +998,8 @@ export default function Hero(props: {
         showTutorialStep={shouldShowTutorialCoach}
         onClose={() => setEntryCoachDismissed(true)}
         onSetLanguage={(language) => {
-          void saveLanguagePreference(language)
-        }}
+  void saveLanguagePreference(language === 'zh' ? 'zh-CN' : 'en')
+}}
         onOpenConnectorSettings={() => {
           setEntryCoachDismissed(true)
           navigate('/settings/connector', { state: { configName: 'connectors' } })

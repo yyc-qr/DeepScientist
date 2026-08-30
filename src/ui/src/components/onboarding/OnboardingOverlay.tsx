@@ -1195,15 +1195,15 @@ function OnboardingChooser({
 }) {
   return (
     <div className={cn('fixed inset-0 flex items-center justify-center p-4', ONBOARDING_LAYER_CLASS)}>
-      <div className="absolute inset-0 bg-[rgba(17,19,24,0.52)] backdrop-blur-[2px]" />
-      <div className="relative flex w-full max-w-[520px] max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-[28px] border border-white/15 bg-[rgba(255,250,245,0.96)] shadow-[0_32px_100px_-48px_rgba(15,23,42,0.55)] backdrop-blur-xl">
-        <div className="shrink-0 border-b border-black/[0.06] px-6 py-5">
-          <div className="flex items-center gap-3 text-[rgba(92,78,58,0.95)]">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[rgba(199,173,150,0.24)]">
+      <div className="absolute inset-0 bg-[rgba(2,6,18,0.76)] backdrop-blur-[6px]" />
+      <div className="relative flex w-full max-w-[520px] max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(145deg,rgba(6,14,31,0.98),rgba(13,22,52,0.97),rgba(27,18,61,0.96))] shadow-[0_32px_100px_-38px_rgba(37,99,235,0.48)] backdrop-blur-2xl">
+        <div className="shrink-0 border-b border-white/10 px-6 py-5">
+          <div className="flex items-center gap-3 text-slate-100">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-cyan-300/10 border border-cyan-300/20">
               <Languages className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[rgba(126,108,82,0.76)]">
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/70">
                 First Run
               </div>
               <h2 className="mt-1 text-xl font-semibold tracking-tight">
@@ -1214,7 +1214,7 @@ function OnboardingChooser({
         </div>
 
         <div className="feed-scrollbar modal-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <p className="text-sm leading-7 text-[rgba(70,61,49,0.84)]">
+          <p className="text-sm leading-7 text-slate-300">
             DeepScientist 会带你理解 BenchStore、Start Research、quest 工作区和系统监管面。
             Choose Chinese or English, skip for now, or turn the reminder off.
           </p>
@@ -1223,32 +1223,32 @@ function OnboardingChooser({
             <button
               type="button"
               onClick={() => onStart('zh')}
-              className="rounded-[20px] border border-[rgba(126,77,42,0.16)] bg-[rgba(244,239,233,0.76)] px-4 py-4 text-left transition hover:border-[rgba(126,77,42,0.28)] hover:bg-white"
+              className="rounded-[20px] border border-blue-300/15 bg-white/[0.045] px-4 py-4 text-left transition hover:border-cyan-300/35 hover:bg-cyan-300/[0.08]"
             >
-              <div className="text-sm font-semibold text-[rgba(38,36,33,0.95)]">中文讲解</div>
-              <div className="mt-1 text-[12px] leading-6 text-[rgba(86,82,77,0.82)]">
+              <div className="text-sm font-semibold text-white">中文讲解</div>
+              <div className="mt-1 text-[12px] leading-6 text-slate-400">
                 说明新版 BenchStore、启动规划、工作区审计和系统监管。
               </div>
             </button>
             <button
               type="button"
               onClick={() => onStart('en')}
-              className="rounded-[20px] border border-[rgba(126,77,42,0.16)] bg-[rgba(244,239,233,0.76)] px-4 py-4 text-left transition hover:border-[rgba(126,77,42,0.28)] hover:bg-white"
+              className="rounded-[20px] border border-blue-300/15 bg-white/[0.045] px-4 py-4 text-left transition hover:border-cyan-300/35 hover:bg-cyan-300/[0.08]"
             >
-              <div className="text-sm font-semibold text-[rgba(38,36,33,0.95)]">English guide</div>
-              <div className="mt-1 text-[12px] leading-6 text-[rgba(86,82,77,0.82)]">
+              <div className="text-sm font-semibold text-white">English guide</div>
+              <div className="mt-1 text-[12px] leading-6 text-slate-400">
                 Walk through BenchStore, launch planning, workspace audit, and system supervision.
               </div>
             </button>
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-black/[0.06] px-6 py-4">
+        <div className="shrink-0 border-t border-white/10 px-6 py-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="ghost" onClick={onSkip}>
+            <Button variant="ghost" onClick={onSkip} className="rounded-full text-slate-300 hover:bg-white/[0.08] hover:text-white">
               暂时跳过 / Skip for now
             </Button>
-            <Button variant="secondary" onClick={onNever}>
+            <Button variant="secondary" onClick={onNever} className="rounded-full border border-white/10 bg-white/[0.06] text-slate-200 hover:bg-white/[0.12] hover:text-white">
               不再提醒 / Do not remind again
             </Button>
           </div>
@@ -1335,11 +1335,11 @@ function MobileOnboardingCard({
       {overlayRect ? (
         <>
           <div
-            className="fixed left-0 top-0 bg-[rgba(9,11,15,0.7)] backdrop-blur-[2px] pointer-events-auto"
+            className="fixed left-0 top-0 bg-[rgba(2,6,18,0.76)] backdrop-blur-[3px] pointer-events-auto"
             style={{ width: '100vw', height: overlayRect.top }}
           />
           <div
-            className="fixed left-0 bg-[rgba(9,11,15,0.7)] backdrop-blur-[2px] pointer-events-auto"
+            className="fixed left-0 bg-[rgba(2,6,18,0.76)] backdrop-blur-[3px] pointer-events-auto"
             style={{
               top: overlayRect.top,
               width: overlayRect.left,
@@ -1347,7 +1347,7 @@ function MobileOnboardingCard({
             }}
           />
           <div
-            className="fixed bg-[rgba(9,11,15,0.7)] backdrop-blur-[2px] pointer-events-auto"
+            className="fixed bg-[rgba(2,6,18,0.76)] backdrop-blur-[3px] pointer-events-auto"
             style={{
               top: overlayRect.top,
               left: overlayRect.right,
@@ -1356,7 +1356,7 @@ function MobileOnboardingCard({
             }}
           />
           <div
-            className="fixed left-0 bg-[rgba(9,11,15,0.7)] backdrop-blur-[2px] pointer-events-auto"
+            className="fixed left-0 bg-[rgba(2,6,18,0.76)] backdrop-blur-[3px] pointer-events-auto"
             style={{
               top: overlayRect.bottom,
               width: '100vw',
@@ -1365,7 +1365,7 @@ function MobileOnboardingCard({
           />
           {haloRect ? (
             <div
-              className="pointer-events-none fixed rounded-[30px] bg-[radial-gradient(circle_at_center,rgba(255,243,224,0.22)_0%,rgba(255,243,224,0.1)_42%,rgba(255,243,224,0.03)_62%,transparent_78%)] blur-[4px]"
+              className="pointer-events-none fixed rounded-[30px] bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0%,rgba(99,102,241,0.10)_42%,rgba(139,92,246,0.03)_62%,transparent_78%)] blur-[4px]"
               style={{
                 top: haloRect.top,
                 left: haloRect.left,
@@ -1376,7 +1376,7 @@ function MobileOnboardingCard({
             />
           ) : null}
           <div
-            className="pointer-events-none fixed rounded-[26px] border border-[rgba(255,249,239,0.94)] shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_0_24px_rgba(255,230,197,0.24)]"
+            className="pointer-events-none fixed rounded-[26px] border border-cyan-200/80 shadow-[0_0_0_1px_rgba(125,211,252,0.20),0_0_28px_rgba(59,130,246,0.34)]"
             style={{
               top: overlayRect.top,
               left: overlayRect.left,
@@ -1386,20 +1386,20 @@ function MobileOnboardingCard({
           />
           {focusPillPosition ? (
             <div
-              className="pointer-events-none fixed inline-flex items-center gap-2 rounded-full border border-[rgba(255,247,232,0.28)] bg-[rgba(255,248,239,0.14)] px-3 py-1.5 text-[11px] font-semibold tracking-[0.08em] text-white shadow-[0_16px_40px_-28px_rgba(0,0,0,0.58)] backdrop-blur-[10px]"
+              className="pointer-events-none fixed inline-flex items-center gap-2 rounded-full border border-cyan-200/25 bg-cyan-300/[0.10] px-3 py-1.5 text-[11px] font-semibold tracking-[0.08em] text-white shadow-[0_16px_40px_-28px_rgba(0,0,0,0.58)] backdrop-blur-[10px]"
               style={{
                 top: focusPillPosition.top,
                 left: focusPillPosition.left,
                 animation: 'ds-onboarding-float 2.3s ease-in-out infinite',
               }}
             >
-              <span className="h-2 w-2 rounded-full bg-[rgba(255,233,200,0.96)] shadow-[0_0_14px_rgba(255,223,182,0.9)]" />
+              <span className="h-2 w-2 rounded-full bg-cyan-200 shadow-[0_0_16px_rgba(103,232,249,0.95)]" />
               {language === 'zh' ? '请看这里' : 'Look here'}
             </div>
           ) : null}
           {spotlightOrbPosition ? (
             <div
-              className="pointer-events-none fixed h-[22px] w-[22px] rounded-full bg-[radial-gradient(circle,rgba(255,244,220,0.98)_0%,rgba(255,223,182,0.85)_42%,rgba(255,223,182,0.16)_72%,transparent_100%)] shadow-[0_0_28px_rgba(255,224,182,0.88)]"
+              className="pointer-events-none fixed h-[22px] w-[22px] rounded-full bg-[radial-gradient(circle,rgba(207,250,254,0.98)_0%,rgba(96,165,250,0.86)_42%,rgba(139,92,246,0.18)_72%,transparent_100%)] shadow-[0_0_30px_rgba(96,165,250,0.9)]"
               style={{
                 top: spotlightOrbPosition.top,
                 left: spotlightOrbPosition.left,
@@ -1409,39 +1409,39 @@ function MobileOnboardingCard({
           ) : null}
         </>
       ) : (
-        <div className="absolute inset-0 bg-[rgba(9,11,15,0.72)] backdrop-blur-[3px] pointer-events-auto" />
+        <div className="absolute inset-0 bg-[rgba(2,6,18,0.80)] backdrop-blur-[4px] pointer-events-auto" />
       )}
       <div
-        className="relative flex w-full max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-t-[28px] border border-black/[0.08] bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(244,238,231,0.98))] shadow-[0_-28px_80px_-42px_rgba(15,23,42,0.54)]"
+        className="relative flex w-full max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-t-[28px] border border-cyan-300/20 bg-[linear-gradient(160deg,rgba(6,14,31,0.98),rgba(14,24,54,0.97),rgba(28,18,62,0.96))] shadow-[0_-28px_80px_-36px_rgba(59,130,246,0.40)]"
         data-onboarding-id="mobile-onboarding-card"
       >
         <div className="shrink-0 px-5 pt-4">
-          <div className="mx-auto mb-4 h-1.5 w-11 rounded-full bg-black/[0.10]" />
+          <div className="mx-auto mb-4 h-1.5 w-11 rounded-full bg-cyan-200/25" />
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex rounded-full border border-black/[0.08] bg-white/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(107,96,83,0.78)]">
+                <span className="inline-flex rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
                   {routeLabel}
                 </span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(126,108,82,0.72)]">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/65">
                   {copy.progress(stepIndex + 1, totalSteps)}
                 </span>
               </div>
-              <h3 className="mt-3 text-[20px] font-semibold leading-7 tracking-tight text-[rgba(38,36,33,0.96)]">
+              <h3 className="mt-3 text-[20px] font-semibold leading-7 tracking-tight text-white">
                 {step.title[language]}
               </h3>
             </div>
             <button
               type="button"
               onClick={onSkip}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.04] text-[rgba(86,82,77,0.82)]"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.04] text-slate-400"
               aria-label="Close mobile tutorial"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
         </div>
-        <div className="feed-scrollbar modal-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-3 text-[14px] leading-7 text-[rgba(70,61,49,0.84)]">
+        <div className="feed-scrollbar modal-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-3 text-[14px] leading-7 text-slate-300">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -1449,9 +1449,9 @@ function MobileOnboardingCard({
               ul: ({ children }) => <ul className="mb-3 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>,
               ol: ({ children }) => <ol className="mb-3 list-decimal space-y-1 pl-5 last:mb-0">{children}</ol>,
               li: ({ children }) => <li>{children}</li>,
-              strong: ({ children }) => <strong className="font-semibold text-[rgba(38,36,33,0.96)]">{children}</strong>,
+              strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
               code: ({ children }) => (
-                <code className="rounded bg-black/[0.05] px-1.5 py-0.5 text-[12px] text-[rgba(58,50,40,0.92)]">
+                <code className="rounded bg-cyan-300/[0.08] px-1.5 py-0.5 text-[12px] text-cyan-100">
                   {children}
                 </code>
               ),
@@ -1460,22 +1460,22 @@ function MobileOnboardingCard({
             {step.body[language]}
           </ReactMarkdown>
           {step.hint?.[language] ? (
-            <div className="mt-3 rounded-[18px] border border-black/[0.06] bg-white/58 px-3.5 py-3 text-[12px] leading-6 text-[rgba(86,82,77,0.82)]">
+            <div className="mt-3 rounded-[18px] border border-white/10 bg-white/[0.05] px-3.5 py-3 text-[12px] leading-6 text-slate-400">
               {step.hint[language]}
             </div>
           ) : null}
         </div>
-        <div className="shrink-0 border-t border-black/[0.06] px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <div className="shrink-0 border-t border-white/10 px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <div className="flex items-center justify-between gap-3">
-            <Button variant="ghost" onClick={onBack} disabled={stepIndex === 0} className="rounded-full">
+            <Button variant="ghost" onClick={onBack} disabled={stepIndex === 0} className="rounded-full text-slate-300 hover:bg-white/[0.08] hover:text-white">
               <ChevronLeft className="mr-1 h-4 w-4" />
               {copy.back}
             </Button>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={onSkip} className="rounded-full">
+              <Button variant="secondary" onClick={onSkip} className="rounded-full border border-white/10 bg-white/[0.06] text-slate-200 hover:bg-white/[0.12] hover:text-white">
                 {copy.skip}
               </Button>
-              <Button onClick={onNext} className="rounded-full" data-onboarding-id="mobile-onboarding-next">
+              <Button onClick={onNext} className="rounded-full border-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 text-white shadow-[0_12px_30px_-12px_rgba(99,102,241,0.70)] hover:brightness-110" data-onboarding-id="mobile-onboarding-next">
                 {isLast ? copy.finish : copy.next}
                 {!isLast ? <ChevronRight className="ml-1 h-4 w-4" /> : null}
               </Button>
@@ -1910,11 +1910,11 @@ export function OnboardingOverlay() {
       {overlayRect ? (
         <>
           <div
-            className="fixed left-0 top-0 bg-[rgba(9,11,15,0.7)] backdrop-blur-[2px] pointer-events-auto"
+            className="fixed left-0 top-0 bg-[rgba(2,6,18,0.76)] backdrop-blur-[3px] pointer-events-auto"
             style={{ width: '100vw', height: overlayRect.top }}
           />
           <div
-            className="fixed left-0 bg-[rgba(9,11,15,0.7)] backdrop-blur-[2px] pointer-events-auto"
+            className="fixed left-0 bg-[rgba(2,6,18,0.76)] backdrop-blur-[3px] pointer-events-auto"
             style={{
               top: overlayRect.top,
               width: overlayRect.left,
@@ -1922,7 +1922,7 @@ export function OnboardingOverlay() {
             }}
           />
           <div
-            className="fixed bg-[rgba(9,11,15,0.7)] backdrop-blur-[2px] pointer-events-auto"
+            className="fixed bg-[rgba(2,6,18,0.76)] backdrop-blur-[3px] pointer-events-auto"
             style={{
               top: overlayRect.top,
               left: overlayRect.right,
@@ -1931,7 +1931,7 @@ export function OnboardingOverlay() {
             }}
           />
           <div
-            className="fixed left-0 bg-[rgba(9,11,15,0.7)] backdrop-blur-[2px] pointer-events-auto"
+            className="fixed left-0 bg-[rgba(2,6,18,0.76)] backdrop-blur-[3px] pointer-events-auto"
             style={{
               top: overlayRect.bottom,
               width: '100vw',
@@ -1940,7 +1940,7 @@ export function OnboardingOverlay() {
           />
           {haloRect ? (
             <div
-              className="pointer-events-none fixed rounded-[30px] bg-[radial-gradient(circle_at_center,rgba(255,243,224,0.22)_0%,rgba(255,243,224,0.1)_42%,rgba(255,243,224,0.03)_62%,transparent_78%)] blur-[4px]"
+              className="pointer-events-none fixed rounded-[30px] bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0%,rgba(99,102,241,0.10)_42%,rgba(139,92,246,0.03)_62%,transparent_78%)] blur-[4px]"
               style={{
                 top: haloRect.top,
                 left: haloRect.left,
@@ -1951,7 +1951,7 @@ export function OnboardingOverlay() {
             />
           ) : null}
           <div
-            className="pointer-events-none fixed rounded-[26px] border border-[rgba(255,249,239,0.94)] shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_0_24px_rgba(255,230,197,0.24)]"
+            className="pointer-events-none fixed rounded-[26px] border border-cyan-200/80 shadow-[0_0_0_1px_rgba(125,211,252,0.20),0_0_28px_rgba(59,130,246,0.34)]"
             style={{
               top: overlayRect.top,
               left: overlayRect.left,
@@ -1961,20 +1961,20 @@ export function OnboardingOverlay() {
           />
           {focusPillPosition ? (
             <div
-              className="pointer-events-none fixed inline-flex items-center gap-2 rounded-full border border-[rgba(255,247,232,0.28)] bg-[rgba(255,248,239,0.14)] px-3 py-1.5 text-[11px] font-semibold tracking-[0.08em] text-white shadow-[0_16px_40px_-28px_rgba(0,0,0,0.58)] backdrop-blur-[10px]"
+              className="pointer-events-none fixed inline-flex items-center gap-2 rounded-full border border-cyan-200/25 bg-cyan-300/[0.10] px-3 py-1.5 text-[11px] font-semibold tracking-[0.08em] text-white shadow-[0_16px_40px_-28px_rgba(0,0,0,0.58)] backdrop-blur-[10px]"
               style={{
                 top: focusPillPosition.top,
                 left: focusPillPosition.left,
                 animation: 'ds-onboarding-float 2.3s ease-in-out infinite',
               }}
             >
-              <span className="h-2 w-2 rounded-full bg-[rgba(255,233,200,0.96)] shadow-[0_0_14px_rgba(255,223,182,0.9)]" />
+              <span className="h-2 w-2 rounded-full bg-cyan-200 shadow-[0_0_16px_rgba(103,232,249,0.95)]" />
               {focusLabel}
             </div>
           ) : null}
           {spotlightOrbPosition ? (
             <div
-              className="pointer-events-none fixed h-[22px] w-[22px] rounded-full bg-[radial-gradient(circle,rgba(255,244,220,0.98)_0%,rgba(255,223,182,0.85)_42%,rgba(255,223,182,0.16)_72%,transparent_100%)] shadow-[0_0_28px_rgba(255,224,182,0.88)]"
+              className="pointer-events-none fixed h-[22px] w-[22px] rounded-full bg-[radial-gradient(circle,rgba(207,250,254,0.98)_0%,rgba(96,165,250,0.86)_42%,rgba(139,92,246,0.18)_72%,transparent_100%)] shadow-[0_0_30px_rgba(96,165,250,0.9)]"
               style={{
                 top: spotlightOrbPosition.top,
                 left: spotlightOrbPosition.left,
@@ -1984,49 +1984,49 @@ export function OnboardingOverlay() {
           ) : null}
         </>
       ) : (
-        <div className="absolute inset-0 bg-[rgba(9,11,15,0.72)] backdrop-blur-[3px] pointer-events-auto" />
+        <div className="absolute inset-0 bg-[rgba(2,6,18,0.80)] backdrop-blur-[4px] pointer-events-auto" />
       )}
 
       <div
         ref={cardRef}
-        className="pointer-events-auto fixed flex max-h-[calc(100vh-32px)] w-[min(466px,calc(100vw-32px))] flex-col overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.28)] bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(246,239,231,0.95))] p-5 shadow-[0_32px_110px_-44px_rgba(15,23,42,0.62)] backdrop-blur-xl"
+        className="pointer-events-auto fixed flex max-h-[calc(100vh-32px)] w-[min(466px,calc(100vw-32px))] flex-col overflow-hidden rounded-[30px] border border-cyan-300/20 bg-[linear-gradient(145deg,rgba(6,14,31,0.98),rgba(14,22,52,0.97),rgba(29,18,64,0.96))] p-5 shadow-[0_32px_110px_-36px_rgba(59,130,246,0.46)] backdrop-blur-2xl"
         style={{
           top: cardPosition.top,
           left: cardPosition.left,
         }}
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(160,133,103,0.4),transparent)]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(96,165,250,0.85),rgba(139,92,246,0.85),transparent)]" />
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgba(199,173,150,0.22)] text-[rgba(92,78,58,0.95)]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgba(199,173,150,0.22)] text-slate-100">
             {step.route === 'landing' ? <Compass className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex rounded-full border border-[rgba(148,118,82,0.14)] bg-[rgba(255,255,255,0.58)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(126,108,82,0.86)]">
+                <span className="inline-flex rounded-full border border-cyan-300/15 bg-cyan-300/[0.07] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">
                   {tutorialBadge}
                 </span>
-                <span className="inline-flex rounded-full border border-[rgba(148,118,82,0.1)] bg-[rgba(244,239,233,0.72)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(126,108,82,0.72)]">
+                <span className="inline-flex rounded-full border border-violet-300/15 bg-violet-300/[0.07] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/65">
                   {routeBadge}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => exitTutorial('close')}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[rgba(107,103,97,0.76)] transition hover:bg-black/[0.04] hover:text-[rgba(38,36,33,0.95)]"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[rgba(107,103,97,0.76)] transition hover:bg-black/[0.04] hover:text-white"
                 aria-label="Close tutorial"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(126,108,82,0.76)]">
+            <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200/70">
               {copy.progress(stepIndex + 1, activeSteps.length)}
             </div>
-            <h3 className="mt-2 text-lg font-semibold tracking-tight text-[rgba(38,36,33,0.96)]">
+            <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">
               {step.title[activeLanguage]}
             </h3>
-            <div className="mt-2 text-sm leading-7 text-[rgba(70,61,49,0.84)]">
+            <div className="mt-2 text-sm leading-7 text-slate-300">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -2034,9 +2034,9 @@ export function OnboardingOverlay() {
                   ul: ({ children }) => <ul className="mb-3 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>,
                   ol: ({ children }) => <ol className="mb-3 list-decimal space-y-1 pl-5 last:mb-0">{children}</ol>,
                   li: ({ children }) => <li>{children}</li>,
-                  strong: ({ children }) => <strong className="font-semibold text-[rgba(38,36,33,0.96)]">{children}</strong>,
+                  strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
                   code: ({ children }) => (
-                    <code className="rounded bg-black/[0.05] px-1.5 py-0.5 text-[12px] text-[rgba(58,50,40,0.92)]">
+                    <code className="rounded bg-cyan-300/[0.08] px-1.5 py-0.5 text-[12px] text-cyan-100">
                       {children}
                     </code>
                   ),
@@ -2046,12 +2046,12 @@ export function OnboardingOverlay() {
               </ReactMarkdown>
             </div>
             {isActionStep ? (
-              <div className="mt-4 rounded-[20px] border border-[rgba(126,77,42,0.12)] bg-[linear-gradient(180deg,rgba(251,248,244,0.92),rgba(241,234,225,0.82))] px-3.5 py-3 text-[12px] leading-6 text-[rgba(86,82,77,0.84)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+              <div className="mt-4 rounded-[20px] border border-cyan-300/15 bg-[linear-gradient(180deg,rgba(11,28,57,0.78),rgba(19,20,53,0.72))] px-3.5 py-3 text-[12px] leading-6 text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                 {infoMessage}
               </div>
             ) : null}
             {!isActionStep ? (
-              <div className="mt-4 rounded-[20px] border border-[rgba(126,77,42,0.12)] bg-[linear-gradient(180deg,rgba(251,248,244,0.92),rgba(241,234,225,0.82))] px-3.5 py-3 text-[12px] leading-6 text-[rgba(86,82,77,0.84)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+              <div className="mt-4 rounded-[20px] border border-cyan-300/15 bg-[linear-gradient(180deg,rgba(11,28,57,0.78),rgba(19,20,53,0.72))] px-3.5 py-3 text-[12px] leading-6 text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                 {infoMessage}
               </div>
             ) : null}
@@ -2061,7 +2061,7 @@ export function OnboardingOverlay() {
 
         <div className={cn('mt-6 flex shrink-0 flex-wrap gap-2', stepIndex === 0 ? 'justify-end' : 'justify-between')}>
           {stepIndex > 0 ? (
-            <Button variant="ghost" onClick={handlePrevious}>
+            <Button variant="ghost" onClick={handlePrevious} className="rounded-full text-slate-300 hover:bg-white/[0.08] hover:text-white">
               <ChevronLeft className="mr-1 h-4 w-4" />
               {copy.back}
             </Button>
@@ -2069,11 +2069,11 @@ export function OnboardingOverlay() {
             <span />
           )}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => exitTutorial('close')}>
+            <Button variant="secondary" onClick={() => exitTutorial('close')} className="rounded-full border border-white/10 bg-white/[0.06] text-slate-200 hover:bg-white/[0.12] hover:text-white">
               <BookOpen className="mr-2 h-4 w-4" />
               {copy.skip}
             </Button>
-            <Button onClick={isActionStep ? advanceWithAction : advance}>
+            <Button onClick={isActionStep ? advanceWithAction : advance} className="rounded-full border-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 text-white shadow-[0_12px_30px_-12px_rgba(99,102,241,0.75)] hover:brightness-110">
               {stepIndex >= activeSteps.length - 1 ? copy.finish : copy.next}
               {stepIndex < activeSteps.length - 1 ? <ChevronRight className="ml-1 h-4 w-4" /> : null}
             </Button>

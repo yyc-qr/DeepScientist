@@ -2808,3 +2808,317 @@
     box-shadow: 0 0 0 0 rgba(45, 42, 38, 0);
   }
 }
+
+/* =========================================================
+   DeepScientist Competition Theme
+   Unified dark blue / violet glass style for ALL inner pages
+   ========================================================= */
+
+:root,
+.dark,
+[data-theme='dark'] {
+  --brand: #7c8cff;
+  --brand-foreground: #ffffff;
+  --brand-hover: #9aa6ff;
+  --brand-subtle: rgba(124, 140, 255, 0.16);
+
+  --background: 224 47% 7%;
+  --foreground: 215 28% 96%;
+  --card: 224 38% 10%;
+  --card-foreground: 215 28% 96%;
+  --popover: 225 40% 9%;
+  --popover-foreground: 215 28% 96%;
+  --primary: 230 92% 70%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 225 28% 16%;
+  --secondary-foreground: 215 28% 96%;
+  --muted: 225 24% 15%;
+  --muted-foreground: 216 15% 70%;
+  --accent: 258 55% 22%;
+  --accent-foreground: 215 28% 96%;
+  --border: 220 28% 22%;
+  --input: 220 28% 22%;
+  --ring: 217 91% 68%;
+
+  --soft-bg-base-hsl: 224 47% 7%;
+  --soft-bg-surface-hsl: 224 38% 10%;
+  --soft-bg-elevated-hsl: 224 34% 12%;
+  --soft-bg-inset-hsl: 225 38% 8%;
+  --soft-text-primary-hsl: 215 28% 96%;
+  --soft-text-secondary-hsl: 216 18% 76%;
+  --soft-text-tertiary-hsl: 218 13% 58%;
+  --soft-accent-hsl: 230 72% 62%;
+  --soft-accent-light-hsl: 194 90% 62%;
+  --soft-border-hsl: 220 28% 22%;
+
+  --ds-app-bg: #050b18;
+  --ds-brand: #dce7ff;
+  --ds-brand-hover: #ffffff;
+  --ds-brand-subtle: rgba(96, 165, 250, 0.16);
+  --ds-panel: rgba(8, 17, 36, 0.78);
+  --ds-panel-elevated: rgba(13, 27, 55, 0.88);
+  --ds-panel-soft: rgba(10, 22, 46, 0.72);
+  --ds-warm-glow: rgba(139, 92, 246, 0.18);
+  --ds-cool-glow: rgba(56, 189, 248, 0.18);
+  --ds-shadow-md: 0 18px 50px -34px rgba(0, 0, 0, 0.72);
+  --ds-shadow-float: 0 28px 90px -42px rgba(0, 0, 0, 0.82);
+
+  --text-primary: #f6f9ff;
+  --text-secondary: #cbd8ee;
+  --text-tertiary: #8ea3c7;
+  --text-quaternary: #64779b;
+  --accent-primary: #7c8cff;
+  --background-main: rgba(5, 11, 24, 0.96);
+  --background-gray-subtle: rgba(255, 255, 255, 0.055);
+
+  --ds-cardnav-bg: rgba(8, 17, 36, 0.88);
+  --ds-cardnav-border: rgba(148, 163, 184, 0.18);
+  --ds-cardnav-text: #eef5ff;
+  --ds-cardnav-card-1: rgba(12, 28, 58, 0.94);
+  --ds-cardnav-card-2: rgba(26, 22, 67, 0.94);
+  --ds-cardnav-card-3: rgba(7, 38, 55, 0.94);
+  --ds-cardnav-cta-bg: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  --ds-cardnav-cta-text: #ffffff;
+
+  --bg-panel-left: rgba(5, 13, 29, 0.94);
+  --bg-panel-center: rgba(8, 18, 39, 0.94);
+  --bg-panel-right: rgba(9, 17, 37, 0.94);
+  --text-main: #edf4ff;
+  --text-muted: #9fb0cc;
+  --text-on-dark: #f7fbff;
+  --text-muted-on-dark: rgba(222, 232, 247, 0.72);
+  --border-light: rgba(148, 163, 184, 0.14);
+  --border-dark: rgba(148, 163, 184, 0.14);
+
+  --ds-copilot-text: #edf4ff;
+  --ds-copilot-text-muted: #9fb0cc;
+}
+
+html,
+body,
+#root {
+  background: #050b18 !important;
+  color: #edf4ff;
+}
+
+body::before {
+  background:
+    radial-gradient(50% 42% at 8% 0%, rgba(37, 99, 235, 0.24), transparent 64%),
+    radial-gradient(46% 42% at 94% 4%, rgba(124, 58, 237, 0.22), transparent 66%),
+    radial-gradient(54% 38% at 56% 100%, rgba(6, 182, 212, 0.12), transparent 70%),
+    linear-gradient(145deg, #050b18 0%, #09142a 48%, #17103a 100%) !important;
+}
+
+body::after {
+  opacity: 0.72 !important;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(125, 211, 252, 0.028) 0,
+      rgba(125, 211, 252, 0.028) 1px,
+      transparent 1px,
+      transparent 56px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(125, 211, 252, 0.022) 0,
+      rgba(125, 211, 252, 0.022) 1px,
+      transparent 1px,
+      transparent 56px
+    ) !important;
+}
+
+/* Workspace shell */
+#workspace-root {
+  background:
+    radial-gradient(circle at 85% 10%, rgba(124, 58, 237, 0.12), transparent 30%),
+    radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.12), transparent 35%),
+    #050b18 !important;
+
+  --ds-copilot-glass-bg-0: rgba(7, 16, 35, 0.90);
+  --ds-copilot-glass-bg-1: rgba(37, 99, 235, 0.18);
+  --ds-copilot-glass-bg-2: rgba(124, 58, 237, 0.18);
+  --ds-copilot-glass-border: rgba(148, 163, 184, 0.18);
+  --ds-copilot-glass-inner: rgba(8, 18, 39, 0.86);
+  --ds-copilot-glass-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+  --ds-copilot-glass-glow: 0 0 0 1px rgba(96, 165, 250, 0.10);
+  --ds-copilot-text: #edf4ff;
+  --ds-copilot-text-muted: #9fb0cc;
+  --ds-icon-btn-text: #9fb0cc;
+  --ds-icon-btn-text-active: #ffffff;
+  --ds-icon-btn-hover: rgba(96, 165, 250, 0.10);
+  --ds-icon-btn-active: rgba(124, 140, 255, 0.16);
+  --ds-icon-btn-border: rgba(148, 163, 184, 0.18);
+}
+
+/* Main workspace navbar */
+.navbar {
+  color: #edf4ff !important;
+  background: rgba(7, 16, 35, 0.82) !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  border-bottom-color: rgba(96, 165, 250, 0.18) !important;
+  box-shadow: 0 14px 40px -28px rgba(0, 0, 0, 0.9) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* Three main workspace panels */
+.left-panel,
+.center-panel,
+.right-panel,
+.panel {
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+.left-panel {
+  color: rgba(222, 232, 247, 0.76) !important;
+  background: rgba(5, 13, 29, 0.93) !important;
+}
+
+.center-panel {
+  color: #edf4ff !important;
+  background: rgba(8, 18, 39, 0.92) !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+.right-panel {
+  color: rgba(222, 232, 247, 0.80) !important;
+  background: rgba(7, 15, 33, 0.94) !important;
+}
+
+.left-panel .panel-header,
+.right-panel .panel-header,
+.center-panel .panel-header {
+  color: #f7fbff !important;
+  border-bottom-color: rgba(148, 163, 184, 0.13) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(96, 165, 250, 0.08),
+    rgba(255, 255, 255, 0.01)
+  ) !important;
+}
+
+/* Existing "morandi" / yellow-white surfaces become blue glass */
+.morandi-surface,
+.morandi-panel,
+.home-card,
+.workflow-card,
+.ds-copilot-glass {
+  color: #edf4ff !important;
+  background:
+    radial-gradient(220px circle at 10% 0%, rgba(96, 165, 250, 0.10), transparent 58%),
+    radial-gradient(220px circle at 100% 100%, rgba(139, 92, 246, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(13, 27, 55, 0.88), rgba(7, 16, 35, 0.84)) !important;
+  border-color: rgba(148, 163, 184, 0.15) !important;
+  box-shadow:
+    0 20px 55px -38px rgba(0, 0, 0, 0.88),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Cards/popovers/dialogs using shadcn variables */
+.bg-card,
+.bg-popover,
+.bg-background,
+.bg-muted,
+.bg-secondary {
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+[data-radix-popper-content-wrapper] > div,
+[role='dialog'] {
+  color: #edf4ff;
+}
+
+/* Controls */
+input,
+textarea,
+select {
+  color: #edf4ff !important;
+  background-color: rgba(4, 12, 28, 0.72) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(159, 176, 204, 0.62) !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(96, 165, 250, 0.62) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Common buttons without destroying semantic destructive/success buttons */
+button:not([data-variant='destructive']) {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+button:not([data-variant='destructive']):hover {
+  border-color: rgba(125, 211, 252, 0.28);
+}
+
+/* Text and dividers */
+.text-black,
+.text-\[\#2D2A26\],
+.text-\[\#5D5A55\],
+.text-\[\#7E8B97\] {
+  color: #edf4ff !important;
+}
+
+.border-black\/10,
+.border-black\/15 {
+  border-color: rgba(148, 163, 184, 0.15) !important;
+}
+
+/* Markdown/readable outputs */
+.markdown-body {
+  color: #dce7f7 !important;
+}
+
+.markdown-body p,
+.markdown-body li {
+  color: rgba(220, 231, 247, 0.90) !important;
+}
+
+.markdown-body :not(pre) > code {
+  color: #dce7ff;
+  background: rgba(96, 165, 250, 0.10) !important;
+}
+
+/* Scrollbars */
+.feed-scrollbar,
+.modal-scrollbar,
+.benchstore-scrollbar,
+#workspace-root {
+  scrollbar-color: rgba(96, 165, 250, 0.34) transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(96, 165, 250, 0.32) !important;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 211, 252, 0.48) !important;
+}
+
+/* Make inner pages feel visually connected to the landing HUD */
+.workspace-home-surface,
+.workspace-stage-shell,
+.workspace-stage-layer {
+  background: transparent !important;
+}
+
+/* Preserve warning/error/success semantic readability */
+.text-destructive,
+[role='alert'] {
+  color: #fca5a5;
+}
+
+
