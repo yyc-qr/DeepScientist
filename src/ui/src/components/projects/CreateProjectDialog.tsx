@@ -854,13 +854,13 @@ const copy = {
 } as const
 
 const selectClassName =
-  'h-9 rounded-[10px] border border-[rgba(45,42,38,0.1)] bg-white/78 px-3 text-xs text-[rgba(38,36,33,0.95)] outline-none transition focus:border-[rgba(45,42,38,0.18)] dark:border-[rgba(45,42,38,0.1)] dark:bg-white/82 dark:text-[rgba(38,36,33,0.95)] dark:focus:border-[rgba(45,42,38,0.18)]'
+  'h-9 rounded-[10px] border border-blue-300/15 bg-[#081126]/90 px-3 text-xs text-slate-100 outline-none transition focus:border-blue-300/45 focus:ring-1 focus:ring-blue-400/20 dark:border-blue-300/15 dark:bg-[#081126]/90 dark:text-slate-100 dark:focus:border-blue-300/45'
 
 const fieldToneClassName =
-  'text-[rgba(38,36,33,0.95)] placeholder:text-[rgba(107,103,97,0.72)] dark:text-[rgba(38,36,33,0.95)] dark:placeholder:text-[rgba(107,103,97,0.72)]'
+  'text-slate-100 placeholder:text-slate-500 dark:text-slate-100 dark:placeholder:text-slate-500'
 
 const panelClass =
-  'rounded-xl border border-[rgba(45,42,38,0.09)] bg-[rgba(255,255,255,0.76)] shadow-[0_12px_30px_-24px_rgba(45,42,38,0.32)] backdrop-blur-xl dark:border-[rgba(45,42,38,0.09)] dark:bg-[rgba(255,255,255,0.82)]'
+  'rounded-xl border border-blue-300/15 bg-[#101B36]/92 shadow-[0_16px_40px_-28px_rgba(59,130,246,0.35)] backdrop-blur-xl dark:border-blue-300/15 dark:bg-[#101B36]/92'
 
 const connectorCatalogByName = new Map(connectorCatalog.map((entry) => [entry.name, entry]))
 
@@ -1335,12 +1335,12 @@ function FieldHelp({
       <button
         type="button"
         tabIndex={-1}
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[rgba(107,103,97,0.78)] transition hover:text-[rgba(45,42,38,0.95)] dark:text-[rgba(107,103,97,0.78)] dark:hover:text-[rgba(45,42,38,0.95)]"
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:text-white dark:text-slate-400 dark:hover:text-white"
         aria-label={text}
       >
         <CircleHelp className="h-3.5 w-3.5" />
       </button>
-      <div className="pointer-events-none absolute left-1/2 top-[calc(100%+0.45rem)] z-20 hidden w-64 -translate-x-1/2 rounded-[14px] border border-[rgba(45,42,38,0.1)] bg-[rgba(255,255,255,0.97)] px-3 py-2 text-[11px] leading-5 text-[rgba(56,52,47,0.92)] shadow-[0_20px_40px_-28px_rgba(45,42,38,0.45)] group-hover:block dark:border-[rgba(45,42,38,0.1)] dark:bg-[rgba(255,255,255,0.97)] dark:text-[rgba(56,52,47,0.92)]">
+      <div className="pointer-events-none absolute left-1/2 top-[calc(100%+0.45rem)] z-20 hidden w-64 -translate-x-1/2 rounded-[14px] border border-blue-300/15 bg-[#111C38]/98 px-3 py-2 text-[11px] leading-5 text-slate-200 shadow-[0_20px_40px_-28px_rgba(37,99,235,0.28)] group-hover:block dark:border-blue-300/15 dark:bg-[#111C38]/98 dark:text-slate-200">
         {text}
       </div>
     </div>
@@ -1362,11 +1362,11 @@ function InlineField({
 }) {
   return (
     <div className="space-y-1" data-onboarding-id={dataOnboardingId}>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-[rgba(75,73,69,0.78)] dark:text-[rgba(75,73,69,0.78)]">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-400">
         <span>{label}</span>
         {help ? <FieldHelp text={help} /> : null}
       </div>
-      {hint ? <div className="text-[11px] leading-5 text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">{hint}</div> : null}
+      {hint ? <div className="text-[11px] leading-5 text-slate-400 dark:text-slate-400">{hint}</div> : null}
       {children}
     </div>
   )
@@ -1413,8 +1413,8 @@ function ChoiceField<T extends string>({
                 'flex w-full items-start gap-3 rounded-[14px] border px-3 py-3 text-left transition',
                 'disabled:cursor-not-allowed disabled:opacity-60',
                 active
-                  ? 'border-[rgba(126,77,42,0.32)] bg-[rgba(126,77,42,0.08)] shadow-[0_14px_26px_-22px_rgba(90,56,35,0.55)] dark:border-[rgba(126,77,42,0.32)] dark:bg-[rgba(126,77,42,0.08)]'
-                  : 'border-[rgba(45,42,38,0.08)] bg-white/60 hover:border-[rgba(45,42,38,0.14)] hover:bg-white/82 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/70 dark:hover:border-[rgba(45,42,38,0.14)] dark:hover:bg-white/86'
+                  ? 'border-indigo-300/30 bg-indigo-400/10 shadow-[0_14px_26px_-22px_rgba(90,56,35,0.55)] dark:border-indigo-300/30 dark:bg-indigo-400/10'
+                  : 'border-blue-300/15 bg-[#101B36]/60 hover:border-blue-300/30 hover:bg-[#101B36]/82 dark:border-blue-300/15 dark:bg-[#101B36]/70 dark:hover:border-blue-300/30 dark:hover:bg-[#17254A]/95'
               )}
             >
               <span
@@ -1422,29 +1422,29 @@ function ChoiceField<T extends string>({
                 className={cn(
                   'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition',
                   active
-                    ? 'border-[rgba(126,77,42,0.78)] bg-[rgba(126,77,42,0.14)] dark:border-[rgba(126,77,42,0.78)] dark:bg-[rgba(126,77,42,0.14)]'
-                    : 'border-[rgba(107,103,97,0.34)] bg-transparent dark:border-[rgba(107,103,97,0.34)]'
+                    ? 'border-indigo-300/55 bg-indigo-400/15 dark:border-indigo-300/55 dark:bg-indigo-400/15'
+                    : 'border-slate-400/30 bg-transparent dark:border-slate-400/30'
                 )}
               >
                 <span
                   className={cn(
                     'h-1.5 w-1.5 rounded-full transition',
-                    active ? 'bg-[rgba(126,77,42,0.92)] dark:bg-[rgba(126,77,42,0.92)]' : 'bg-transparent'
+                    active ? 'bg-indigo-500/90 dark:bg-indigo-500/90' : 'bg-transparent'
                   )}
                 />
               </span>
               <span className="min-w-0">
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-xs font-semibold text-[rgba(38,36,33,0.95)] dark:text-[rgba(38,36,33,0.95)]">
+                  <span className="text-xs font-semibold text-slate-100 dark:text-slate-100">
                     {item.title}
                   </span>
                   {item.meta ? (
-                    <span className="text-[10px] uppercase tracking-[0.16em] text-[rgba(107,103,97,0.78)] dark:text-[rgba(107,103,97,0.78)]">
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-slate-400 dark:text-slate-400">
                       {item.meta}
                     </span>
                   ) : null}
                 </span>
-                <span className="mt-1 block text-[11px] leading-5 text-[rgba(86,82,77,0.82)] dark:text-[rgba(86,82,77,0.82)]">
+                <span className="mt-1 block text-[11px] leading-5 text-slate-400 dark:text-slate-400">
                   {item.description}
                 </span>
               </span>
@@ -1515,7 +1515,7 @@ function ConnectorChoiceField({
   return (
     <InlineField label={label} help={help} hint={hint}>
       {loading ? (
-        <div className="rounded-[14px] border border-[rgba(45,42,38,0.08)] bg-white/60 px-3 py-3 text-[11px] leading-5 text-[rgba(86,82,77,0.82)] dark:border-[rgba(45,42,38,0.08)] dark:bg-white/70 dark:text-[rgba(86,82,77,0.82)]">
+        <div className="rounded-[14px] border border-blue-300/15 bg-[#101B36]/60 px-3 py-3 text-[11px] leading-5 text-slate-400 dark:border-blue-300/15 dark:bg-[#101B36]/70 dark:text-slate-400">
           Loading connectors…
         </div>
       ) : (
@@ -1568,12 +1568,12 @@ function SectionCard({
       className={cn(
         'overflow-x-hidden rounded-[18px] border p-3 sm:rounded-xl',
         muted
-          ? 'border-[rgba(45,42,38,0.08)] bg-[rgba(244,239,233,0.56)] dark:border-[rgba(45,42,38,0.08)] dark:bg-[rgba(244,239,233,0.66)] sm:bg-[rgba(244,239,233,0.62)] sm:dark:bg-[rgba(244,239,233,0.72)]'
-          : 'border-[rgba(45,42,38,0.08)] bg-white/72 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/82 sm:shadow-[0_12px_30px_-24px_rgba(45,42,38,0.32)] sm:backdrop-blur-xl'
+          ? 'border-blue-300/10 bg-[#0C1730]/72'
+          : 'border-blue-300/15 bg-[#101B36]/92 shadow-[0_18px_46px_-34px_rgba(59,130,246,0.45)] backdrop-blur-xl'
       )}
     >
-      <div className="text-sm font-semibold text-[rgba(38,36,33,0.95)] dark:text-[rgba(38,36,33,0.95)]">{title}</div>
-      <div className="mt-3 space-y-3">{children}</div>
+      <div className="text-sm font-semibold text-slate-100">{title}</div>
+      <div className="mt-3 space-y-3 text-slate-300">{children}</div>
     </div>
   )
 }
@@ -1597,8 +1597,8 @@ function StartSetupScienceBriefCard({
     task.solver_installation_unknown ? (locale === 'zh' ? 'solver 未验证' : 'solver unverified') : null,
   ].filter(Boolean)
   return (
-    <div className="rounded-[18px] border border-[rgba(88,122,94,0.16)] bg-[rgba(238,246,239,0.68)] px-3.5 py-3 text-[12px] leading-6 text-[rgba(56,74,61,0.92)]">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(57,96,65,0.82)]">
+    <div className="rounded-[18px] border border-emerald-300/20 bg-emerald-400/[0.08] px-3.5 py-3 text-[12px] leading-6 text-emerald-100">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-300">
         {locale === 'zh' ? 'Science Evidence Graph' : 'Science Evidence Graph'}
       </div>
       {domainLine ? <div className="mt-1 font-medium">{domainLine}</div> : null}
@@ -1670,25 +1670,25 @@ function StartSetupPlanningReviewDialog({
       className="absolute inset-0 z-[80] flex items-center justify-center bg-black/18 p-[3%] backdrop-blur-[3px]"
       data-onboarding-id="start-research-planning-review-dialog"
     >
-      <div className="flex h-[92%] w-[92%] max-w-[1120px] flex-col overflow-hidden rounded-[32px] border border-[rgba(45,42,38,0.10)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,243,236,0.98))] shadow-[0_44px_140px_-58px_rgba(15,23,42,0.68)] backdrop-blur-2xl">
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[rgba(45,42,38,0.08)] px-5 py-4 sm:px-6">
+      <div className="flex h-[92%] w-[92%] max-w-[1120px] flex-col overflow-hidden rounded-[32px] border border-blue-300/15 bg-[linear-gradient(180deg,rgba(12,25,52,0.98),rgba(9,19,41,0.98))] shadow-[0_44px_140px_-58px_rgba(15,23,42,0.68)] backdrop-blur-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-blue-300/15 px-5 py-4 sm:px-6">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="text-lg font-semibold tracking-[-0.03em] text-[rgba(38,36,33,0.96)]">
+              <div className="text-lg font-semibold tracking-[-0.03em] text-slate-50">
                 {locale === 'zh' ? '启动规划' : 'Launch plan'}
               </div>
               <span className={cn(
                 'rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]',
                 decision === 'copilot'
-                  ? 'border-[rgba(154,96,68,0.20)] bg-[rgba(252,244,239,0.9)] text-[rgba(126,77,42,0.95)]'
+                  ? 'border-violet-300/20 bg-violet-400/[0.08] text-indigo-200'
                   : decision === 'provisional'
-                    ? 'border-[rgba(122,148,159,0.22)] bg-[rgba(236,242,245,0.95)] text-[rgba(73,103,117,0.95)]'
-                    : 'border-[rgba(88,122,94,0.18)] bg-[rgba(88,122,94,0.10)] text-[rgba(57,96,65,0.95)]'
+                    ? 'border-cyan-300/20 bg-[#0D1B35]/95 text-cyan-200'
+                    : 'border-emerald-300/20 bg-emerald-400/10 text-emerald-200'
               )}>
                 {modeLabel}
               </span>
             </div>
-            <div className="mt-1 text-sm leading-6 text-[rgba(86,82,77,0.78)]">
+            <div className="mt-1 text-sm leading-6 text-slate-400">
               {locale === 'zh'
                 ? 'SetupAgent 已整理出一份可审阅的启动方案。你可以继续商讨、切到协作模式，或确认直接开始。'
                 : 'SetupAgent prepared a reviewable launch plan. You can keep discussing, switch to Copilot, or start directly.'}
@@ -1696,7 +1696,7 @@ function StartSetupPlanningReviewDialog({
           </div>
           <button
             type="button"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[rgba(107,103,97,0.72)] transition hover:bg-black/[0.05] hover:text-[rgba(45,42,38,0.94)]"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-400/10 hover:text-white"
             onClick={onClose}
             aria-label={locale === 'zh' ? '关闭启动规划' : 'Close launch plan'}
           >
@@ -1704,18 +1704,18 @@ function StartSetupPlanningReviewDialog({
           </button>
         </div>
 
-        <div className="grid shrink-0 gap-2 border-b border-[rgba(45,42,38,0.08)] px-5 py-3 sm:grid-cols-3 sm:px-6">
-          <div className="rounded-[16px] border border-[rgba(45,42,38,0.08)] bg-white/72 px-3.5 py-3">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(107,103,97,0.70)]">{locale === 'zh' ? '推荐模式' : 'Mode'}</div>
-            <div className="mt-1 text-sm font-semibold text-[rgba(45,42,38,0.92)]">{recommendedMode || modeLabel}</div>
+        <div className="grid shrink-0 gap-2 border-b border-blue-300/15 px-5 py-3 sm:grid-cols-3 sm:px-6">
+          <div className="rounded-[16px] border border-blue-300/15 bg-[#101B36]/72 px-3.5 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{locale === 'zh' ? '推荐模式' : 'Mode'}</div>
+            <div className="mt-1 text-sm font-semibold text-slate-100">{recommendedMode || modeLabel}</div>
           </div>
-          <div className="rounded-[16px] border border-[rgba(45,42,38,0.08)] bg-white/72 px-3.5 py-3">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(107,103,97,0.70)]">{locale === 'zh' ? '启动状态' : 'Readiness'}</div>
-            <div className="mt-1 text-sm font-semibold text-[rgba(45,42,38,0.92)]">{readinessLabel}</div>
+          <div className="rounded-[16px] border border-blue-300/15 bg-[#101B36]/72 px-3.5 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{locale === 'zh' ? '启动状态' : 'Readiness'}</div>
+            <div className="mt-1 text-sm font-semibold text-slate-100">{readinessLabel}</div>
           </div>
-          <div className="rounded-[16px] border border-[rgba(45,42,38,0.08)] bg-white/72 px-3.5 py-3">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(107,103,97,0.70)]">{locale === 'zh' ? '待确认' : 'Confirmations'}</div>
-            <div className="mt-1 text-sm font-semibold text-[rgba(45,42,38,0.92)]">
+          <div className="rounded-[16px] border border-blue-300/15 bg-[#101B36]/72 px-3.5 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{locale === 'zh' ? '待确认' : 'Confirmations'}</div>
+            <div className="mt-1 text-sm font-semibold text-slate-100">
               {session.missingConfirmations.length > 0
                 ? locale === 'zh' ? `${session.missingConfirmations.length} 项` : `${session.missingConfirmations.length} item(s)`
                 : locale === 'zh' ? '暂无' : 'None'}
@@ -1729,16 +1729,16 @@ function StartSetupPlanningReviewDialog({
           {fitSummary || planSummary || session.missingConfirmations.length > 0 ? (
             <div className="mb-4 mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
               {(fitSummary || planSummary) ? (
-                <div className="rounded-[20px] border border-[rgba(45,42,38,0.08)] bg-white/72 px-4 py-3 text-sm leading-6 text-[rgba(56,52,47,0.88)]">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(107,103,97,0.72)]">
+                <div className="rounded-[20px] border border-blue-300/15 bg-[#101B36]/72 px-4 py-3 text-sm leading-6 text-slate-300">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                     {locale === 'zh' ? '判断摘要' : 'Assessment'}
                   </div>
                   <div className="mt-2">{fitSummary || planSummary}</div>
                 </div>
               ) : null}
               {session.missingConfirmations.length > 0 ? (
-                <div className="rounded-[20px] border border-[rgba(154,96,68,0.16)] bg-[rgba(252,244,239,0.72)] px-4 py-3 text-sm leading-6 text-[rgba(86,82,77,0.9)]">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(126,77,42,0.82)]">
+                <div className="rounded-[20px] border border-violet-300/15 bg-violet-400/[0.07] px-4 py-3 text-sm leading-6 text-slate-300">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-300">
                     {locale === 'zh' ? '仍需确认' : 'Still missing'}
                   </div>
                   <ul className="mt-2 list-disc space-y-1 pl-4">
@@ -1751,7 +1751,7 @@ function StartSetupPlanningReviewDialog({
             </div>
           ) : null}
 
-          <div className="rounded-[22px] border border-[rgba(45,42,38,0.08)] bg-white/78 px-4 py-4 shadow-[0_18px_52px_-44px_rgba(45,42,38,0.34)]">
+          <div className="rounded-[22px] border border-blue-300/15 bg-[#101B36]/78 px-4 py-4 shadow-[0_18px_52px_-44px_rgba(37,99,235,0.24)]">
             {planMarkdown ? (
               <AnimatedMarkdownPlan
                 content={planMarkdown}
@@ -1760,15 +1760,15 @@ function StartSetupPlanningReviewDialog({
                 maxAnimatedLines={18}
               />
             ) : (
-              <div className="text-sm leading-6 text-[rgba(86,82,77,0.78)]">
+              <div className="text-sm leading-6 text-slate-400">
                 {locale === 'zh' ? 'SetupAgent 已提交判断，但还没有写入可展示的 Markdown 规划。你可以继续商讨，让它补全启动规划。' : 'SetupAgent submitted an assessment but did not provide a displayable Markdown plan yet. Keep discussing to ask for a complete launch plan.'}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2 border-t border-[rgba(45,42,38,0.08)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="text-xs leading-5 text-[rgba(107,103,97,0.76)]">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-blue-300/15 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="text-xs leading-5 text-slate-400">
             {locale === 'zh' ? '关闭后可继续在 SetupAgent 对话中补充要求。' : 'Close this to keep discussing with SetupAgent.'}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
@@ -1788,7 +1788,7 @@ function StartSetupPlanningReviewDialog({
               </Button>
             ) : null}
             {hasSuggestedForm && onAcceptAutonomous ? (
-              <Button type="button" className="rounded-full bg-[#2D2A26] text-white hover:bg-[#3B3731]" onClick={onAcceptAutonomous} disabled={loading}>
+              <Button type="button" className="rounded-full bg-[#17213B] text-white hover:bg-[#202D50]" onClick={onAcceptAutonomous} disabled={loading}>
                 {decision === 'provisional'
                   ? locale === 'zh' ? '确认风险并启动' : 'Start with confirmations'
                   : locale === 'zh' ? '确认并启动全自动' : 'Start autonomous'}
@@ -1850,10 +1850,10 @@ export function StartSetupAssessmentCard({
   const tone = decision === 'copilot' ? 'warning' : decision === 'provisional' ? 'soft' : fitAssessmentTone(session.recommendedWorkspaceMode || fitVerdict)
   const toneClassName =
     tone === 'warning'
-      ? 'border-[rgba(154,96,68,0.18)] bg-[linear-gradient(145deg,rgba(252,244,239,0.96),rgba(244,233,225,0.94))]'
+      ? 'border-violet-300/20 bg-[linear-gradient(145deg,rgba(13,28,57,0.98),rgba(35,36,83,0.96))]'
       : tone === 'soft'
-        ? 'border-[rgba(122,148,159,0.18)] bg-[linear-gradient(145deg,rgba(248,250,251,0.96),rgba(236,242,245,0.94))]'
-        : 'border-[rgba(126,77,42,0.16)] bg-[linear-gradient(145deg,rgba(251,247,241,0.96),rgba(241,233,223,0.94))]'
+        ? 'border-cyan-300/20 bg-[linear-gradient(145deg,rgba(11,29,57,0.98),rgba(18,46,75,0.96))]'
+        : 'border-indigo-300/15 bg-[linear-gradient(145deg,rgba(13,27,55,0.98),rgba(43,35,88,0.96))]'
   const badgeText =
     decision === 'copilot'
       ? locale === 'zh'
@@ -1880,18 +1880,18 @@ export function StartSetupAssessmentCard({
           : 'SetupAgent thinks this fits long-running autonomous computer-side work. Confirm to use the proposed form.'
 
   return (
-    <div className={cn('mb-3 flex max-h-[min(74svh,820px)] min-h-0 flex-col overflow-hidden rounded-[24px] border px-4 py-4 shadow-[0_18px_52px_-38px_rgba(45,42,38,0.32)] backdrop-blur-xl', toneClassName)}>
+    <div className={cn('mb-3 flex max-h-[min(74svh,820px)] min-h-0 flex-col overflow-hidden rounded-[24px] border px-4 py-4 shadow-[0_18px_52px_-38px_rgba(37,99,235,0.22)] backdrop-blur-xl', toneClassName)}>
       <div
         key={`setup-mode-bar-${planCompletePulseKey}`}
         className={cn(
-          'rounded-[20px] border border-[rgba(45,42,38,0.08)] bg-white/72 px-3.5 py-3',
+          'rounded-[20px] border border-blue-300/15 bg-[#101B36]/72 px-3.5 py-3',
           planCompletePulseKey > 0 && 'motion-safe:animate-[setup-mode-ready_900ms_cubic-bezier(0.22,1,0.36,1)]'
         )}
       >
         <div className="flex min-w-0 flex-col gap-3">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[rgba(45,42,38,0.08)] bg-white/82 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[rgba(45,42,38,0.82)]">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-blue-300/15 bg-[#101B36]/82 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300">
                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                 <span className="min-w-0 truncate">{badgeText}</span>
               </div>
@@ -1899,7 +1899,7 @@ export function StartSetupAssessmentCard({
             {onDismiss ? (
               <button
                 type="button"
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[rgba(107,103,97,0.72)] transition hover:bg-black/[0.04] hover:text-[rgba(45,42,38,0.94)]"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-400/10 hover:text-white"
                 onClick={onDismiss}
                 aria-label={locale === 'zh' ? '关闭建议卡' : 'Dismiss recommendation'}
               >
@@ -1908,7 +1908,7 @@ export function StartSetupAssessmentCard({
             ) : null}
           </div>
           <div className="min-w-0">
-            <div className="text-[12px] leading-6 text-[rgba(86,82,77,0.82)]">{statusBody}</div>
+            <div className="text-[12px] leading-6 text-slate-400">{statusBody}</div>
           </div>
           <div className="flex min-w-0 flex-wrap gap-2">
             {onContinueDiscuss ? (
@@ -1918,7 +1918,7 @@ export function StartSetupAssessmentCard({
               </Button>
             ) : null}
             {decision === 'copilot' && onSwitchToCopilot ? (
-              <Button type="button" className="rounded-full bg-[#2D2A26] text-white hover:bg-[#3B3731]" onClick={onSwitchToCopilot} disabled={loading}>
+              <Button type="button" className="rounded-full bg-[#17213B] text-white hover:bg-[#202D50]" onClick={onSwitchToCopilot} disabled={loading}>
                 <ArrowUpRight className="mr-1.5 h-4 w-4" />
                 {locale === 'zh' ? '按建议创建协作模式' : 'Create Copilot'}
               </Button>
@@ -1948,12 +1948,12 @@ export function StartSetupAssessmentCard({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               {(fitSummary || launchReadiness) ? (
-                <div className="mt-3 text-sm leading-6 text-[rgba(56,52,47,0.92)]">
+                <div className="mt-3 text-sm leading-6 text-slate-200">
                   {fitSummary || launchReadiness}
                 </div>
               ) : null}
               {session.missingConfirmations.length > 0 ? (
-                <div className="mt-3 text-[12px] leading-6 text-[rgba(86,82,77,0.82)]">
+                <div className="mt-3 text-[12px] leading-6 text-slate-400">
                   <span className="font-semibold">
                     {locale === 'zh' ? '仍待确认' : 'Still missing'}:
                   </span>{' '}
@@ -1970,8 +1970,8 @@ export function StartSetupAssessmentCard({
           </div>
 
       {planSummary ? (
-        <div className="mt-4 rounded-[18px] border border-[rgba(45,42,38,0.08)] bg-white/70 px-3.5 py-3 text-[12px] leading-6 text-[rgba(75,73,69,0.84)]">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(107,103,97,0.72)]">
+        <div className="mt-4 rounded-[18px] border border-blue-300/15 bg-[#101B36]/70 px-3.5 py-3 text-[12px] leading-6 text-slate-300">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
             {locale === 'zh' ? '启动预览规划' : 'Launch preview'}
           </div>
           <div className="mt-1.5">{planSummary}</div>
@@ -1979,11 +1979,11 @@ export function StartSetupAssessmentCard({
       ) : null}
 
       {planMarkdown ? (
-        <div className="mt-4 rounded-[18px] border border-[rgba(45,42,38,0.08)] bg-white/76 px-4 py-3 text-[12px] leading-6 text-[rgba(75,73,69,0.86)]">
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(107,103,97,0.72)]">
+        <div className="mt-4 rounded-[18px] border border-blue-300/15 bg-[#101B36]/76 px-4 py-3 text-[12px] leading-6 text-slate-300">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
             {locale === 'zh' ? '启动规划' : 'Launch plan'}
           </div>
-          <div className="feed-scrollbar max-h-[min(54svh,620px)] overflow-y-auto rounded-[14px] bg-[rgba(248,245,240,0.74)] px-3 py-3">
+          <div className="feed-scrollbar max-h-[min(54svh,620px)] overflow-y-auto rounded-[14px] bg-[#0D1830]/80 px-3 py-3">
             <AnimatedMarkdownPlan
               content={planMarkdown}
               animateKey={`${session.recommendedWorkspaceMode || ''}:${session.launchReadiness || ''}`}
@@ -2005,22 +2005,22 @@ export function StartSetupAssessmentCard({
             return (
               <div
                 key={`${title}-${index}`}
-                className="rounded-[18px] border border-[rgba(45,42,38,0.08)] bg-white/74 px-3.5 py-3 text-[12px] leading-6 text-[rgba(75,73,69,0.84)]"
+                className="rounded-[18px] border border-blue-300/15 bg-[#101B36]/74 px-3.5 py-3 text-[12px] leading-6 text-slate-300"
               >
-                <div className="text-sm font-semibold text-[rgba(38,36,33,0.94)]">{title}</div>
+                <div className="text-sm font-semibold text-slate-100">{title}</div>
                 {goal ? <div className="mt-1">{goal}</div> : null}
                 {deliverable ? (
-                  <div className="mt-2 text-[11px] text-[rgba(107,103,97,0.78)]">
+                  <div className="mt-2 text-[11px] text-slate-400">
                     {locale === 'zh' ? '预期产出' : 'Deliverable'}: {deliverable}
                   </div>
                 ) : null}
                 {dependsOn ? (
-                  <div className="text-[11px] text-[rgba(107,103,97,0.78)]">
+                  <div className="text-[11px] text-slate-400">
                     {locale === 'zh' ? '依赖' : 'Depends on'}: {dependsOn}
                   </div>
                 ) : null}
                 {switchCondition ? (
-                  <div className="text-[11px] text-[rgba(107,103,97,0.78)]">
+                  <div className="text-[11px] text-slate-400">
                     {locale === 'zh' ? '切换条件' : 'Switch condition'}: {switchCondition}
                   </div>
                 ) : null}
@@ -2064,22 +2064,22 @@ function LaunchMaterialsCard({
           event.target.value = ''
         }}
       />
-      <div className="text-[11px] leading-5 text-[rgba(107,103,97,0.72)]">
+      <div className="text-[11px] leading-5 text-slate-400">
         {locale === 'zh'
           ? '这里的文件会一起进入最终启动 prompt，并在创建 quest 时自动复制到新 quest 的默认附件目录。'
           : 'These files are injected into the final launch prompt and copied into the new quest when it is created.'}
       </div>
 
       {setupAttachments.length > 0 ? (
-        <div className="rounded-[14px] border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[rgba(107,103,97,0.72)]">
+        <div className="rounded-[14px] border border-blue-300/15 bg-[#101B36]/70 px-3 py-3">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
             {locale === 'zh' ? '已从 SetupAgent 会话继承' : 'Inherited from SetupAgent'}
           </div>
           <div className="mt-2 space-y-2">
             {setupAttachments.map((attachment) => (
-              <div key={attachment.id} className="rounded-[12px] border border-[rgba(45,42,38,0.08)] bg-[rgba(252,250,246,0.92)] px-3 py-2">
-                <div className="truncate text-[12px] font-medium text-[rgba(38,36,33,0.94)]">{attachment.label}</div>
-                <div className="mt-0.5 truncate text-[11px] text-[rgba(107,103,97,0.76)]">
+              <div key={attachment.id} className="rounded-[12px] border border-blue-300/15 bg-[#0A142A]/95 px-3 py-2">
+                <div className="truncate text-[12px] font-medium text-slate-100">{attachment.label}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-400">
                   {attachment.location || (locale === 'zh' ? '位置将在创建时解析' : 'Location will be resolved at launch')}
                 </div>
               </div>
@@ -2088,13 +2088,13 @@ function LaunchMaterialsCard({
         </div>
       ) : null}
 
-      <div className="rounded-[14px] border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-3">
+      <div className="rounded-[14px] border border-blue-300/15 bg-[#101B36]/70 px-3 py-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[rgba(107,103,97,0.72)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
               {locale === 'zh' ? '在表单页补充' : 'Add from this form'}
             </div>
-            <div className="mt-1 text-[11px] leading-5 text-[rgba(107,103,97,0.76)]">
+            <div className="mt-1 text-[11px] leading-5 text-slate-400">
               {locale === 'zh'
                 ? '适合补充数据文件、PDF、说明文档或本地参考材料。'
                 : 'Useful for extra datasets, PDFs, notes, or local reference materials.'}
@@ -2110,12 +2110,12 @@ function LaunchMaterialsCard({
             {localAttachments.map((attachment) => (
               <div
                 key={attachment.draftId}
-                className="inline-flex max-w-full items-center gap-2 rounded-full border border-[rgba(45,42,38,0.08)] bg-[rgba(252,250,246,0.92)] px-3 py-1.5 text-[12px] text-[rgba(56,52,47,0.9)]"
+                className="inline-flex max-w-full items-center gap-2 rounded-full border border-blue-300/15 bg-[#0A142A]/95 px-3 py-1.5 text-[12px] text-slate-200"
               >
                 <span className="truncate">{attachment.name}</span>
                 <button
                   type="button"
-                  className="text-[rgba(107,103,97,0.72)] transition hover:text-[rgba(45,42,38,0.94)]"
+                  className="text-slate-400 transition hover:text-white"
                   onClick={() => onRemoveAttachment(attachment.draftId)}
                 >
                   ×
@@ -4087,7 +4087,7 @@ export function CreateProjectDialog({
           type="button"
           variant="ghost"
           size="icon"
-          className="sticky right-0 top-0 z-40 ml-auto h-9 w-9 shrink-0 rounded-full bg-white/80 shadow-sm backdrop-blur lg:hidden"
+          className="sticky right-0 top-0 z-40 ml-auto h-9 w-9 shrink-0 rounded-full bg-[#101B36]/80 shadow-sm backdrop-blur lg:hidden"
           onClick={onClose}
           aria-label={locale === 'zh' ? '关闭' : 'Close'}
         >
@@ -4095,10 +4095,10 @@ export function CreateProjectDialog({
         </Button>
         <div
           className={cn(
-            'flex min-w-0 max-w-full flex-none flex-col overflow-visible lg:h-full lg:min-h-0 lg:flex-auto lg:overflow-hidden lg:rounded-[28px] lg:border lg:border-black/[0.06] lg:bg-[rgba(255,250,245,0.76)] lg:shadow-[0_22px_72px_-54px_rgba(15,23,42,0.3)] lg:backdrop-blur-xl'
+            'flex min-w-0 max-w-full flex-none flex-col overflow-visible lg:h-full lg:min-h-0 lg:flex-auto lg:overflow-hidden lg:rounded-[28px] lg:border lg:border-black/[0.06] lg:bg-[#0D1830]/85 lg:shadow-[0_22px_72px_-54px_rgba(15,23,42,0.3)] lg:backdrop-blur-xl'
           )}
         >
-          <div className="hidden shrink-0 border-b border-[rgba(45,42,38,0.08)] px-4 py-3 lg:block dark:border-[rgba(45,42,38,0.08)]">
+          <div className="hidden shrink-0 border-b border-blue-300/15 px-4 py-3 lg:block dark:border-blue-300/15">
             <div className="flex flex-wrap items-center justify-end gap-2 lg:justify-between">
               <div className="flex flex-wrap items-center gap-2" data-onboarding-id="start-research-preview-mode-tabs">
                 <Button
@@ -4142,7 +4142,7 @@ export function CreateProjectDialog({
           <div className="min-w-0 max-w-full px-0 py-1 sm:px-0 sm:py-1 lg:feed-scrollbar lg:modal-scrollbar lg:min-h-0 lg:flex-1 lg:overflow-y-scroll lg:overscroll-contain lg:p-4">
             <div className="flex min-h-full min-w-0 max-w-full flex-col gap-4">
               {manualOverride ? (
-                <div className="rounded-lg border border-[#c4a066]/50 bg-[#c4a066]/10 px-3 py-2 text-xs text-[rgba(56,49,35,0.92)]">
+                <div className="rounded-lg border border-indigo-300/35 bg-indigo-400/10 px-3 py-2 text-xs text-indigo-100">
                   <div className="flex items-center gap-2 font-semibold">
                     <Lock className="h-3.5 w-3.5" />
                     {t.manualTitle}
@@ -4158,7 +4158,7 @@ export function CreateProjectDialog({
                     value={form.title}
                     onChange={(event) => setField('title', event.target.value)}
                     placeholder={t.titlePlaceholder}
-                    className={`rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                    className={`rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                     disabled={manualOverride}
                   />
                 </InlineField>
@@ -4169,7 +4169,7 @@ export function CreateProjectDialog({
                       value={displayedQuestId}
                       onChange={(event) => handleQuestIdChange(event.target.value)}
                       placeholder={suggestedQuestIdLoading ? t.repoLoading : suggestedQuestId || t.repoPlaceholder}
-                      className={`rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                      className={`rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                       disabled={manualOverride}
                     />
                   </InlineField>
@@ -4181,7 +4181,7 @@ export function CreateProjectDialog({
                     value={form.goal}
                     onChange={(event) => setField('goal', event.target.value)}
                     placeholder={t.goalPlaceholder}
-                    className={`min-h-[150px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                    className={`min-h-[150px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                     disabled={manualOverride}
                   />
                 </InlineField>
@@ -4223,7 +4223,7 @@ export function CreateProjectDialog({
 
                       {selectedBaselineEntry?.baseline_variants?.length ? (
                         <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-[rgba(75,73,69,0.78)] dark:text-[rgba(75,73,69,0.78)]">
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-400">
                             <span>{t.baselineVariant}</span>
                             <FieldHelp text={t.baselineVariantHelp} />
                           </div>
@@ -4243,7 +4243,7 @@ export function CreateProjectDialog({
                       ) : null}
 
                       {selectedBaselineEntry ? (
-                        <div className="rounded-lg border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-2.5 text-[11px] leading-5 text-[rgba(75,73,69,0.82)] dark:border-[rgba(45,42,38,0.08)] dark:bg-white/76 dark:text-[rgba(75,73,69,0.82)]">
+                        <div className="rounded-lg border border-blue-300/15 bg-[#101B36]/70 px-3 py-2.5 text-[11px] leading-5 text-slate-400 dark:border-blue-300/15 dark:bg-[#101B36]/76 dark:text-slate-400">
                           <div>{selectedBaselineEntry.summary ? clampText(String(selectedBaselineEntry.summary), 120) : (locale === 'zh' ? '未提供概要。' : 'No summary provided.')}</div>
                           <div className="mt-2 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2">
                             <div>{locale === 'zh' ? '状态' : 'Status'}: {formatBaselineStatus(selectedBaselineEntry.status, locale)}</div>
@@ -4265,7 +4265,7 @@ export function CreateProjectDialog({
                     value={form.baseline_urls}
                     onChange={(event) => setField('baseline_urls', event.target.value)}
                     placeholder={t.baselineUrlsPlaceholder}
-                    className={`min-h-[92px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                    className={`min-h-[92px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                     disabled={manualOverride || Boolean(form.baseline_id?.trim())}
                   />
                 </InlineField>
@@ -4274,18 +4274,18 @@ export function CreateProjectDialog({
                     value={form.paper_urls}
                     onChange={(event) => setField('paper_urls', event.target.value)}
                     placeholder={t.paperUrlsPlaceholder}
-                    className={`min-h-[92px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                    className={`min-h-[92px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                     disabled={manualOverride}
                   />
                 </InlineField>
                 <div
-                  className="rounded-[18px] border border-[rgba(45,42,38,0.08)] bg-[linear-gradient(145deg,rgba(253,247,241,0.94),rgba(239,229,220,0.84)_42%,rgba(226,235,239,0.82))] px-4 py-4 shadow-[0_16px_44px_-34px_rgba(44,39,34,0.24)]"
+                  className="rounded-[18px] border border-blue-300/15 bg-[linear-gradient(145deg,rgba(12,27,55,0.96),rgba(29,39,86,0.92)_42%,rgba(27,50,79,0.90))] px-4 py-4 shadow-[0_16px_44px_-34px_rgba(44,39,34,0.24)]"
                   data-onboarding-id="start-research-deepxiv"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-[rgba(38,36,33,0.95)] dark:text-[rgba(38,36,33,0.95)]">{deepxivT.title}</div>
-                      <div className="mt-2 text-[11px] leading-6 text-[rgba(75,73,69,0.78)] dark:text-[rgba(75,73,69,0.78)]">
+                      <div className="text-sm font-semibold text-slate-100 dark:text-slate-100">{deepxivT.title}</div>
+                      <div className="mt-2 text-[11px] leading-6 text-slate-400 dark:text-slate-400">
                         {deepxivT.body}
                       </div>
                     </div>
@@ -4352,7 +4352,7 @@ export function CreateProjectDialog({
                         </option>
                       ))}
                     </select>
-                    <div className="inline-flex h-9 items-center rounded-[10px] border border-[rgba(45,42,38,0.09)] bg-white/65 px-3 text-[11px] text-[rgba(75,73,69,0.72)] dark:border-[rgba(45,42,38,0.09)] dark:bg-white/72 dark:text-[rgba(75,73,69,0.72)]">
+                    <div className="inline-flex h-9 items-center rounded-[10px] border border-blue-300/15 bg-[#101B36]/65 px-3 text-[11px] text-slate-400 dark:border-blue-300/15 dark:bg-[#101B36]/72 dark:text-slate-400">
                       {templateOptions.length}
                     </div>
                   </div>
@@ -4360,15 +4360,15 @@ export function CreateProjectDialog({
                   </SectionCard>
 
                   <SectionCard title={t.questTarget} muted>
-                <div className="text-[11px] leading-5 text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">{t.targetHint}</div>
+                <div className="text-[11px] leading-5 text-slate-400 dark:text-slate-400">{t.targetHint}</div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-3 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/76">
-                    <div className="text-[11px] text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">{t.targetMode}</div>
-                    <div className="mt-1 text-sm font-semibold text-[rgba(38,36,33,0.95)] dark:text-[rgba(38,36,33,0.95)]">{t.targetModeValue}</div>
+                  <div className="rounded-lg border border-blue-300/15 bg-[#101B36]/70 px-3 py-3 dark:border-blue-300/15 dark:bg-[#101B36]/76">
+                    <div className="text-[11px] text-slate-400 dark:text-slate-400">{t.targetMode}</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-100 dark:text-slate-100">{t.targetModeValue}</div>
                   </div>
-                  <div className="rounded-lg border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-3 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/76">
-                    <div className="text-[11px] text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">{t.targetRunner}</div>
-                    <div className="mt-1 text-sm font-semibold text-[rgba(38,36,33,0.95)] dark:text-[rgba(38,36,33,0.95)]">{`${runnerLabel(activeRunnerName)} / ${locale === 'zh' ? '本地 daemon' : 'local daemon'}`}</div>
+                  <div className="rounded-lg border border-blue-300/15 bg-[#101B36]/70 px-3 py-3 dark:border-blue-300/15 dark:bg-[#101B36]/76">
+                    <div className="text-[11px] text-slate-400 dark:text-slate-400">{t.targetRunner}</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-100 dark:text-slate-100">{`${runnerLabel(activeRunnerName)} / ${locale === 'zh' ? '本地 daemon' : 'local daemon'}`}</div>
                   </div>
                 </div>
                 <div data-onboarding-id="start-research-connector">
@@ -4451,7 +4451,7 @@ export function CreateProjectDialog({
                           disabled={manualOverride}
                         />
                         {form.manuscript_edit_mode === 'latex_required' ? (
-                          <div className="rounded-lg border border-[rgba(126,77,42,0.22)] bg-[rgba(126,77,42,0.06)] px-3 py-2 text-[11px] leading-5 text-[rgba(86,82,77,0.88)] dark:border-[rgba(126,77,42,0.22)] dark:bg-[rgba(126,77,42,0.08)] dark:text-[rgba(86,82,77,0.88)]">
+                          <div className="rounded-lg border border-indigo-300/20 bg-indigo-400/[0.07] px-3 py-2 text-[11px] leading-5 text-slate-300 dark:border-indigo-300/20 dark:bg-indigo-400/10 dark:text-slate-300">
                             {t.manuscriptEditModeNote}
                           </div>
                         ) : null}
@@ -4462,7 +4462,7 @@ export function CreateProjectDialog({
                         value={form.entry_state_summary}
                         onChange={(event) => setField('entry_state_summary', event.target.value)}
                         placeholder={t.entryStateSummaryPlaceholder}
-                        className={`min-h-[92px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                        className={`min-h-[92px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                         disabled={manualOverride}
                       />
                     </InlineField>
@@ -4472,7 +4472,7 @@ export function CreateProjectDialog({
                           value={form.review_summary}
                           onChange={(event) => setField('review_summary', event.target.value)}
                           placeholder={t.reviewSummaryPlaceholder}
-                          className={`min-h-[92px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                          className={`min-h-[92px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                           disabled={manualOverride}
                         />
                       </InlineField>
@@ -4483,7 +4483,7 @@ export function CreateProjectDialog({
                           value={form.review_materials}
                           onChange={(event) => setField('review_materials', event.target.value)}
                           placeholder={t.reviewMaterialsPlaceholder}
-                          className={`min-h-[92px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                          className={`min-h-[92px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                           disabled={manualOverride}
                         />
                       </InlineField>
@@ -4493,7 +4493,7 @@ export function CreateProjectDialog({
                         value={form.custom_brief}
                         onChange={(event) => setField('custom_brief', event.target.value)}
                         placeholder={t.customBriefPlaceholder}
-                        className={`min-h-[92px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                        className={`min-h-[92px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                         disabled={manualOverride}
                       />
                     </InlineField>
@@ -4536,7 +4536,7 @@ export function CreateProjectDialog({
                   onChange={(value) => setField('baseline_acceptance_target', value as BaselineAcceptanceTarget)}
                   disabled={manualOverride}
                 />
-                <div className="rounded-[14px] border border-[rgba(45,42,38,0.08)] bg-[rgba(244,239,233,0.52)] px-3 py-3 text-[11px] leading-5 text-[rgba(86,82,77,0.82)] dark:border-[rgba(45,42,38,0.08)] dark:bg-[rgba(244,239,233,0.62)] dark:text-[rgba(86,82,77,0.82)]">
+                <div className="rounded-[14px] border border-blue-300/15 bg-[#0C1730]/72 px-3 py-3 text-[11px] leading-5 text-slate-400 dark:border-blue-300/15 dark:bg-[#0C1730]/78 dark:text-slate-400">
                   {locale === 'zh'
                     ? '上面这 3 个控制项只影响“Start Research 刚开始时如何处理 baseline”。它们不会把后续所有 stage 都变成必须先计划后执行。'
                     : 'These 3 controls only affect how Start Research enters baseline work. They do not force every later stage into plan-then-execute mode.'}
@@ -4561,13 +4561,13 @@ export function CreateProjectDialog({
                 />
                 {form.launch_mode === 'custom' ? (
                   <InlineField label={t.researchPaperLabel} help={t.researchPaperHelp} hint={t.researchPaperHelp}>
-                    <div className="rounded-[14px] border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-3 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/76">
+                    <div className="rounded-[14px] border border-blue-300/15 bg-[#101B36]/70 px-3 py-3 dark:border-blue-300/15 dark:bg-[#101B36]/76">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="text-xs font-semibold text-[rgba(38,36,33,0.95)] dark:text-[rgba(38,36,33,0.95)]">
+                          <div className="text-xs font-semibold text-slate-100 dark:text-slate-100">
                             {form.need_research_paper ? t.researchPaperEnabled : t.researchPaperDisabled}
                           </div>
-                          <div className="mt-1 text-[11px] leading-5 text-[rgba(86,82,77,0.82)] dark:text-[rgba(86,82,77,0.82)]">
+                          <div className="mt-1 text-[11px] leading-5 text-slate-400 dark:text-slate-400">
                             {form.need_research_paper ? t.researchPaperEnabledBody : t.researchPaperDisabledBody}
                           </div>
                         </div>
@@ -4582,46 +4582,46 @@ export function CreateProjectDialog({
                     </div>
                   </InlineField>
                 ) : null}
-                <div className="rounded-[14px] border border-[rgba(45,42,38,0.08)] bg-[rgba(244,239,233,0.52)] px-3 py-3 dark:border-[rgba(45,42,38,0.08)] dark:bg-[rgba(244,239,233,0.62)]">
-                  <div className="text-[11px] font-medium text-[rgba(75,73,69,0.78)] dark:text-[rgba(75,73,69,0.78)]">
+                <div className="rounded-[14px] border border-blue-300/15 bg-[#0C1730]/72 px-3 py-3 dark:border-blue-300/15 dark:bg-[#0C1730]/78">
+                  <div className="text-[11px] font-medium text-slate-400 dark:text-slate-400">
                     {t.derivedPolicyTitle}
                   </div>
-                  <div className="mt-1 text-[11px] leading-5 text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">
+                  <div className="mt-1 text-[11px] leading-5 text-slate-400 dark:text-slate-400">
                     {t.derivedPolicyHint}
                   </div>
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <div className="rounded-[12px] border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-2 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/76">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">
+                    <div className="rounded-[12px] border border-blue-300/15 bg-[#101B36]/70 px-3 py-2 dark:border-blue-300/15 dark:bg-[#101B36]/76">
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-400">
                         {derivedScopeCopy.title}
                       </div>
-                      <div className="mt-1 text-[11px] leading-5 text-[rgba(56,52,47,0.9)] dark:text-[rgba(56,52,47,0.9)]">
+                      <div className="mt-1 text-[11px] leading-5 text-slate-200 dark:text-slate-200">
                         {derivedScopeCopy.description}
                       </div>
                     </div>
-                    <div className="rounded-[12px] border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-2 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/76">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">
+                    <div className="rounded-[12px] border border-blue-300/15 bg-[#101B36]/70 px-3 py-2 dark:border-blue-300/15 dark:bg-[#101B36]/76">
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-400">
                         {derivedBaselineModeCopy.title}
                       </div>
-                      <div className="mt-1 text-[11px] leading-5 text-[rgba(56,52,47,0.9)] dark:text-[rgba(56,52,47,0.9)]">
+                      <div className="mt-1 text-[11px] leading-5 text-slate-200 dark:text-slate-200">
                         {derivedBaselineModeCopy.description}
                       </div>
                     </div>
-                    <div className="rounded-[12px] border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-2 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/76">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">
+                    <div className="rounded-[12px] border border-blue-300/15 bg-[#101B36]/70 px-3 py-2 dark:border-blue-300/15 dark:bg-[#101B36]/76">
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-400">
                         {derivedResourcePolicyCopy.title}
                       </div>
-                      <div className="mt-1 text-[11px] leading-5 text-[rgba(56,52,47,0.9)] dark:text-[rgba(56,52,47,0.9)]">
+                      <div className="mt-1 text-[11px] leading-5 text-slate-200 dark:text-slate-200">
                         {derivedResourcePolicyCopy.description}
                       </div>
                     </div>
-                    <div className="rounded-[12px] border border-[rgba(45,42,38,0.08)] bg-white/70 px-3 py-2 dark:border-[rgba(45,42,38,0.08)] dark:bg-white/76">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">
+                    <div className="rounded-[12px] border border-blue-300/15 bg-[#101B36]/70 px-3 py-2 dark:border-blue-300/15 dark:bg-[#101B36]/76">
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-400">
                         {t.derivedPolicyBudgetLabel}
                       </div>
-                      <div className="mt-1 text-[11px] leading-5 text-[rgba(56,52,47,0.9)] dark:text-[rgba(56,52,47,0.9)]">
+                      <div className="mt-1 text-[11px] leading-5 text-slate-200 dark:text-slate-200">
                         {derivedContract.time_budget_hours}h · {derivedGitStrategyCopy.title}
                       </div>
-                      <div className="mt-1 text-[11px] leading-5 text-[rgba(107,103,97,0.78)] dark:text-[rgba(107,103,97,0.78)]">
+                      <div className="mt-1 text-[11px] leading-5 text-slate-400 dark:text-slate-400">
                         {derivedGitStrategyCopy.description}
                       </div>
                     </div>
@@ -4632,7 +4632,7 @@ export function CreateProjectDialog({
                     value={form.runtime_constraints}
                     onChange={(event) => setField('runtime_constraints', event.target.value)}
                     placeholder={t.runtimeConstraintsPlaceholder}
-                    className={`min-h-[92px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                    className={`min-h-[92px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                     disabled={manualOverride}
                   />
                 </InlineField>
@@ -4644,7 +4644,7 @@ export function CreateProjectDialog({
                     value={form.objectives}
                     onChange={(event) => setField('objectives', event.target.value)}
                     placeholder={t.objectivesPlaceholder}
-                    className={`min-h-[120px] rounded-[10px] border-[rgba(45,42,38,0.09)] bg-white/75 text-xs leading-5 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.09)] dark:bg-white/78`}
+                    className={`min-h-[120px] rounded-[10px] border-blue-300/15 bg-[#101B36]/75 text-xs leading-5 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                     disabled={manualOverride}
                   />
                 </InlineField>
@@ -4688,10 +4688,10 @@ export function CreateProjectDialog({
                 )}
               </div>
             ) : (
-              <div className="flex h-full min-h-0 flex-col rounded-[24px] border border-[rgba(45,42,38,0.08)] bg-[rgba(255,255,255,0.78)] shadow-[0_20px_56px_-42px_rgba(45,42,38,0.28)] backdrop-blur-xl" data-onboarding-id="start-research-preview-surface">
-                <div className="shrink-0 border-b border-[rgba(45,42,38,0.08)] px-4 py-3">
-                  <div className="text-sm font-semibold text-[rgba(38,36,33,0.95)]">{t.preview}</div>
-                  <div className="mt-1 text-xs leading-5 text-[rgba(107,103,97,0.72)]">{t.previewBody}</div>
+              <div className="flex h-full min-h-0 flex-col rounded-[24px] border border-blue-300/15 bg-[#101B36]/92 shadow-[0_20px_56px_-42px_rgba(37,99,235,0.20)] backdrop-blur-xl" data-onboarding-id="start-research-preview-surface">
+                <div className="shrink-0 border-b border-blue-300/15 px-4 py-3">
+                  <div className="text-sm font-semibold text-slate-100">{t.preview}</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-400">{t.previewBody}</div>
                 </div>
                 <div className="min-h-0 flex-1 p-4">
                   <Textarea
@@ -4699,7 +4699,7 @@ export function CreateProjectDialog({
                     readOnly
                     aria-label={t.preview}
                     containerClassName="flex h-full min-h-0"
-                    className={`h-full min-h-full overflow-y-auto rounded-[18px] border-[rgba(45,42,38,0.08)] bg-white/70 text-xs leading-6 ${fieldToneClassName} dark:border-[rgba(45,42,38,0.08)] dark:bg-white/78`}
+                    className={`h-full min-h-full overflow-y-auto rounded-[18px] border-blue-300/15 bg-[#101B36]/70 text-xs leading-6 ${fieldToneClassName} dark:border-blue-300/15 dark:bg-[#101B36]/78`}
                   />
                 </div>
               </div>
@@ -4708,12 +4708,12 @@ export function CreateProjectDialog({
 
           <div className="mt-3 flex shrink-0 flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between lg:px-0">
             <div className="flex flex-col gap-1">
-              <div className="inline-flex items-center gap-2 text-[11px] text-[rgba(107,103,97,0.72)] dark:text-[rgba(107,103,97,0.72)]">
+              <div className="inline-flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-400">
                 <BookmarkPlus className="h-3.5 w-3.5" />
                 <span>{templateOptions.length} template(s)</span>
               </div>
               {benchAutoAssistLocked ? (
-                <div className="text-[11px] text-[rgba(107,103,97,0.8)] dark:text-[rgba(107,103,97,0.78)]">
+                <div className="text-[11px] text-slate-400 dark:text-slate-400">
                   {t.benchAutoAssistPending}
                 </div>
               ) : null}
@@ -4749,7 +4749,7 @@ export function CreateProjectDialog({
                 className={cn(
                   'w-full sm:w-auto',
                   benchAutoAssistLocked &&
-                    'bg-[rgba(45,42,38,0.14)] text-[rgba(107,103,97,0.78)] shadow-none'
+                    'bg-blue-400/10 text-slate-400 shadow-none'
                 )}
                 data-onboarding-id="start-research-create"
                 data-disabled-reason={createDisabledReason}
@@ -4803,12 +4803,12 @@ export function CreateProjectDialog({
         >
           <div
             className={cn(
-              'pointer-events-auto feed-scrollbar modal-scrollbar w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[28px] border border-[rgba(45,42,38,0.08)] bg-[rgba(252,248,242,0.96)] px-5 py-5 shadow-[0_34px_100px_-54px_rgba(15,23,42,0.58)] backdrop-blur-2xl transition-all duration-[1800ms] ease-out',
+              'pointer-events-auto feed-scrollbar modal-scrollbar w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[28px] border border-blue-300/15 bg-[#091329]/98 px-5 py-5 shadow-[0_34px_100px_-54px_rgba(15,23,42,0.58)] backdrop-blur-2xl transition-all duration-[1800ms] ease-out',
               setupPlanningNoticeClosing ? 'translate-y-3 scale-[0.985] opacity-0' : 'translate-y-0 scale-100 opacity-100'
             )}
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/72 shadow-[inset_0_0_0_1px_rgba(45,42,38,0.08)]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#101B36]/72 shadow-[inset_0_0_0_1px_rgba(96,165,250,0.12)]">
                 <img
                   src={assetUrl('logo.svg')}
                   alt="DeepScientist"
@@ -4819,7 +4819,7 @@ export function CreateProjectDialog({
                 <div className="text-base font-semibold text-black dark:text-black">
                   {locale === 'zh' ? '收到啦，正在认真规划 ✨' : 'Got it — planning carefully ✨'}
                 </div>
-                <div className="mt-1 text-[13px] leading-6 text-[rgba(86,82,77,0.82)]">
+                <div className="mt-1 text-[13px] leading-6 text-slate-400">
                   {setupPlanningNoticeSettled
                     ? locale === 'zh'
                       ? '预计总计需要约 5 分钟进行研究分析设计计划，请耐心等候。'
@@ -4828,7 +4828,7 @@ export function CreateProjectDialog({
                 </div>
                 <div
                   key={setupPlanningNoticeSettled ? 'settled' : setupPlanningNoticeLiveLine}
-                  className="mt-3 rounded-2xl border border-[rgba(45,42,38,0.08)] bg-white/64 px-3.5 py-2.5 text-[13px] leading-5 text-[rgba(45,42,38,0.88)] shadow-[0_14px_36px_-32px_rgba(45,42,38,0.32)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-500"
+                  className="mt-3 rounded-2xl border border-blue-300/15 bg-[#101B36]/88 px-3.5 py-2.5 text-[13px] leading-5 text-slate-200 shadow-[0_14px_36px_-32px_rgba(37,99,235,0.22)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-500"
                 >
                   {setupPlanningNoticeSettled
                     ? locale === 'zh'
@@ -4836,10 +4836,10 @@ export function CreateProjectDialog({
                       : 'Planning will continue in the SetupAgent conversation and appear there when ready.'
                     : setupPlanningNoticeLiveLine}
                 </div>
-                <div className="mt-4 overflow-hidden rounded-full bg-[rgba(45,42,38,0.08)]">
+                <div className="mt-4 overflow-hidden rounded-full bg-blue-400/10">
                   <div
                     className={cn(
-                      'h-1.5 rounded-full bg-[linear-gradient(90deg,rgba(199,173,150,0.95),rgba(157,185,198,0.95))] transition-[width,opacity] duration-700 ease-out',
+                      'h-1.5 rounded-full bg-[linear-gradient(90deg,rgba(96,165,250,0.95),rgba(139,92,246,0.95))] transition-[width,opacity] duration-700 ease-out',
                       setupPlanningNoticeSettled && 'opacity-80'
                     )}
                     style={{ width: `${Math.round(setupPlanningNoticeProgress * 100)}%` }}
@@ -4862,10 +4862,10 @@ export function CreateProjectDialog({
                         className={cn(
                           'min-h-[132px] rounded-[18px] border px-3.5 py-3 transition-all duration-500',
                           active
-                            ? 'border-[rgba(126,77,42,0.20)] bg-white/86 text-[rgba(45,42,38,0.92)] shadow-[0_18px_42px_-30px_rgba(126,77,42,0.34)] ring-1 ring-[rgba(199,173,150,0.28)]'
+                            ? 'border-indigo-300/20 bg-[#101B36]/96 text-slate-100 shadow-[0_18px_42px_-30px_rgba(99,102,241,0.28)] ring-1 ring-[rgba(129,140,248,0.25)]'
                             : revealed
-                              ? 'border-[rgba(45,42,38,0.08)] bg-white/72 text-[rgba(45,42,38,0.86)] shadow-[0_12px_32px_-28px_rgba(45,42,38,0.28)]'
-                              : 'border-[rgba(45,42,38,0.05)] bg-[rgba(248,245,240,0.72)] text-[rgba(107,103,97,0.62)]'
+                              ? 'border-blue-300/15 bg-[#101B36]/72 text-slate-200 shadow-[0_12px_32px_-28px_rgba(37,99,235,0.20)]'
+                              : 'border-blue-300/10 bg-[#0D1830]/80 text-slate-500'
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -4876,16 +4876,16 @@ export function CreateProjectDialog({
                             className={cn(
                               'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] transition-all duration-500',
                               completed
-                                ? 'border-[rgba(88,122,94,0.18)] bg-[rgba(88,122,94,0.12)] text-[rgba(57,96,65,0.95)]'
+                                ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-200'
                                 : active
-                                  ? 'border-[rgba(126,77,42,0.18)] bg-[rgba(199,173,150,0.20)] text-[rgba(126,77,42,0.95)]'
-                                  : 'border-[rgba(45,42,38,0.08)] bg-white/42 text-[rgba(107,103,97,0.58)]'
+                                  ? 'border-indigo-300/20 bg-indigo-400/15 text-indigo-200'
+                                  : 'border-blue-300/15 bg-[#101B36]/60 text-slate-500'
                             )}
                           >
                             {completed ? '✓' : active ? '•' : index + 1}
                           </span>
                         </div>
-                        <div className="mt-2 text-[12px] leading-5 text-[rgba(86,82,77,0.78)]">
+                        <div className="mt-2 text-[12px] leading-5 text-slate-400">
                           {active ? card.activeBody : card.body}
                         </div>
                       </div>
@@ -4895,7 +4895,7 @@ export function CreateProjectDialog({
               </div>
               <button
                 type="button"
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[rgba(107,103,97,0.72)] transition hover:bg-black/[0.04] hover:text-[rgba(45,42,38,0.94)]"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-400/10 hover:text-white"
                 onClick={() => {
                   closeSetupPlanningNotice()
                 }}

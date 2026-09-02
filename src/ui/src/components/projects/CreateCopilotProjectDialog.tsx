@@ -3,7 +3,6 @@ import { ArrowLeft, Loader2, PanelRightOpen } from 'lucide-react'
 
 import { ConnectorTargetRadioGroup, type ConnectorTargetRadioItem } from '@/components/connectors/ConnectorTargetRadioGroup'
 import { OverlayDialog } from '@/components/home/OverlayDialog'
-import { LAUNCH_DIALOG_SHELL_CLASS } from '@/components/projects/LaunchModeVisuals'
 import { ProjectDisplayPreviewCard } from '@/components/projects/ProjectDisplayPreviewCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -318,31 +317,44 @@ export function CreateCopilotProjectDialog(props: {
       title={t.title}
       description={t.body}
       onClose={props.onClose}
-      className={LAUNCH_DIALOG_SHELL_CLASS}
+      className="h-[90svh] w-[96vw] max-w-none rounded-[32px] border border-[#31476F]/70 bg-[#09142C] text-[#F4F7FF] shadow-[0_40px_120px_-52px_rgba(0,0,0,0.82)] lg:w-[88vw]"
     >
-      <div className="feed-scrollbar grid h-full min-h-0 gap-5 overflow-y-auto p-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:p-5">
-        <div className="rounded-[22px] border border-black/10 bg-white/78 p-5 shadow-[0_20px_64px_-48px_rgba(42,38,33,0.28)] backdrop-blur-xl">
+      <div
+        className="feed-scrollbar grid h-full min-h-0 gap-5 overflow-y-auto p-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:p-5"
+        style={{
+          backgroundImage:
+            'radial-gradient(800px circle at 8% 10%, rgba(59,130,246,0.12), transparent 56%), radial-gradient(700px circle at 92% 8%, rgba(124,58,237,0.10), transparent 52%), linear-gradient(180deg, rgba(9,20,44,0.98), rgba(7,17,38,0.98))',
+        }}
+      >
+        <div className="rounded-[22px] border border-[#30456F]/60 bg-[#0D1935]/95 p-5 shadow-[0_20px_64px_-48px_rgba(0,0,0,0.72)] backdrop-blur-xl">
           <div className="grid gap-6">
             <div>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">{t.titleLabel}</div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                {t.titleLabel}
+              </div>
               <Input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder={t.titlePlaceholder}
-                className="h-12 rounded-[18px] border-black/10 bg-white/80 text-base text-black placeholder:text-[rgba(107,103,97,0.72)] caret-black dark:text-black dark:placeholder:text-[rgba(107,103,97,0.72)]"
+                className="h-12 rounded-[18px] border-[#30456F]/70 bg-[#08142D] text-base text-[#F4F7FF] placeholder:text-[#7286AC] caret-white focus-visible:ring-[#6685FF]/40 dark:text-[#F4F7FF] dark:placeholder:text-[#7286AC]"
               />
             </div>
 
             <div>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">{t.connectorLabel}</div>
-              <div className="mb-4 text-sm leading-6 text-[#5D5A55]">{t.connectorHint}</div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                {t.connectorLabel}
+              </div>
+              <div className="mb-4 text-sm leading-6 text-[#AAB8D4]">
+                {t.connectorHint}
+              </div>
+
               {connectorsLoading ? (
-                <div className="flex items-center gap-3 rounded-[22px] border border-black/8 bg-white/72 px-4 py-4 text-sm text-[#5D5A55]">
+                <div className="flex items-center gap-3 rounded-[22px] border border-[#30456F]/60 bg-[#101D3B] px-4 py-4 text-sm text-[#AAB8D4]">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {t.loadingConnectors}
                 </div>
               ) : connectorItems.length <= 1 ? (
-                <div className="rounded-[22px] border border-black/8 bg-white/72 px-4 py-4 text-sm leading-6 text-[#5D5A55]">
+                <div className="rounded-[22px] border border-[#30456F]/60 bg-[#101D3B] px-4 py-4 text-sm leading-6 text-[#AAB8D4]">
                   {t.noConnectors}
                 </div>
               ) : (
@@ -358,19 +370,27 @@ export function CreateCopilotProjectDialog(props: {
             <button
               type="button"
               onClick={() => setShowAdvanced((current) => !current)}
-              className="flex items-center justify-between rounded-[16px] border border-[rgba(45,42,38,0.08)] bg-[rgba(244,239,233,0.54)] px-4 py-3 text-left transition hover:bg-[rgba(244,239,233,0.72)]"
+              className="flex items-center justify-between rounded-[16px] border border-[#30456F]/60 bg-[#101D3B] px-4 py-3 text-left transition hover:bg-[#142548]"
             >
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B6761]">{t.advancedTitle}</div>
-                <div className="mt-1 text-[11px] leading-5 text-[#7A746C]">{showAdvanced ? t.advancedHide : t.advancedHint}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                  {t.advancedTitle}
+                </div>
+                <div className="mt-1 text-[11px] leading-5 text-[#AAB8D4]">
+                  {showAdvanced ? t.advancedHide : t.advancedHint}
+                </div>
               </div>
-              <div className="text-[12px] font-medium text-[#4A4742]">{showAdvanced ? t.advancedHide : t.advancedShow}</div>
+              <div className="text-[12px] font-medium text-[#D7E2F8]">
+                {showAdvanced ? t.advancedHide : t.advancedShow}
+              </div>
             </button>
 
             {showAdvanced ? (
-              <>
+              <div className="grid gap-5 rounded-[20px] border border-[#30456F]/50 bg-[#0A1630]/70 p-4">
                 <div>
-                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">{t.backgroundLabel}</div>
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                    {t.backgroundLabel}
+                  </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     {PROJECT_BACKGROUND_STYLE_OPTIONS.map((item) => (
                       <button
@@ -380,19 +400,23 @@ export function CreateCopilotProjectDialog(props: {
                         className={cn(
                           'rounded-[22px] border px-4 py-4 text-left transition',
                           backgroundStyle === item.id
-                            ? 'border-black/15 bg-[#F4EEE6] shadow-[0_16px_34px_-24px_rgba(42,38,33,0.3)]'
-                            : 'border-black/8 bg-white/72 hover:border-black/12 hover:bg-white'
+                            ? 'border-[#6685FF]/60 bg-[#162A55] text-[#F4F7FF] shadow-[0_16px_34px_-24px_rgba(78,112,255,0.60)]'
+                            : 'border-[#30456F]/60 bg-[#101D3B] text-[#E6EDFF] hover:border-[#5876B8] hover:bg-[#142548]'
                         )}
                       >
                         <div className="text-sm font-semibold">{item.label}</div>
-                        <div className="mt-2 text-xs leading-5 text-[#5D5A55]">{item.description}</div>
+                        <div className="mt-2 text-xs leading-5 text-[#AAB8D4]">
+                          {item.description}
+                        </div>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">{t.templateLabel}</div>
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                    {t.templateLabel}
+                  </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     {PROJECT_TEMPLATE_OPTIONS.map((item) => (
                       <button
@@ -402,19 +426,23 @@ export function CreateCopilotProjectDialog(props: {
                         className={cn(
                           'rounded-[22px] border px-4 py-4 text-left transition',
                           template === item.id
-                            ? 'border-black/15 bg-[#F4EEE6] shadow-[0_16px_34px_-24px_rgba(42,38,33,0.3)]'
-                            : 'border-black/8 bg-white/72 hover:border-black/12 hover:bg-white'
+                            ? 'border-[#6685FF]/60 bg-[#162A55] text-[#F4F7FF] shadow-[0_16px_34px_-24px_rgba(78,112,255,0.60)]'
+                            : 'border-[#30456F]/60 bg-[#101D3B] text-[#E6EDFF] hover:border-[#5876B8] hover:bg-[#142548]'
                         )}
                       >
                         <div className="text-sm font-semibold">{item.label}</div>
-                        <div className="mt-2 text-xs leading-5 text-[#5D5A55]">{item.description}</div>
+                        <div className="mt-2 text-xs leading-5 text-[#AAB8D4]">
+                          {item.description}
+                        </div>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">{t.accentLabel}</div>
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                    {t.accentLabel}
+                  </div>
                   <div className="flex flex-wrap gap-3">
                     {PROJECT_ACCENT_OPTIONS.map((item) => (
                       <button
@@ -424,8 +452,8 @@ export function CreateCopilotProjectDialog(props: {
                         className={cn(
                           'flex items-center gap-3 rounded-full border px-4 py-2.5 text-sm transition',
                           accentColor === item.id
-                            ? 'border-black/15 bg-white shadow-[0_14px_28px_-24px_rgba(42,38,33,0.4)]'
-                            : 'border-black/8 bg-white/70 hover:border-black/12 hover:bg-white/90'
+                            ? 'border-[#6685FF]/70 bg-[#1A2E5B] text-white shadow-[0_14px_28px_-24px_rgba(78,112,255,0.70)]'
+                            : 'border-[#30456F]/60 bg-[#101D3B] text-[#E6EDFF] hover:border-[#5876B8] hover:bg-[#142548]'
                         )}
                       >
                         <span className={cn('h-3 w-3 rounded-full', item.dotClassName)} />
@@ -434,11 +462,11 @@ export function CreateCopilotProjectDialog(props: {
                     ))}
                   </div>
                 </div>
-              </>
+              </div>
             ) : null}
 
             {error ? (
-              <div className="rounded-[18px] border border-rose-400/25 bg-rose-50/80 px-4 py-3 text-sm text-rose-700">
+              <div className="rounded-[18px] border border-rose-400/25 bg-rose-950/35 px-4 py-3 text-sm text-rose-300">
                 {error}
               </div>
             ) : null}
@@ -447,7 +475,7 @@ export function CreateCopilotProjectDialog(props: {
               {props.onBack ? (
                 <Button
                   variant="outline"
-                  className="rounded-full border-black/10 bg-white/70 px-5"
+                  className="rounded-full border-[#30456F]/70 bg-[#101D3B] px-5 text-[#E6EDFF] hover:bg-[#17284E] hover:text-white"
                   onClick={props.onBack}
                   disabled={creating}
                 >
@@ -455,27 +483,39 @@ export function CreateCopilotProjectDialog(props: {
                   {t.back}
                 </Button>
               ) : null}
+
               <Button
                 variant="ghost"
-                className="rounded-full px-5"
+                className="rounded-full px-5 text-[#D7E2F8] hover:bg-[#142548] hover:text-white"
                 onClick={props.onClose}
                 disabled={creating}
               >
                 {t.cancel}
               </Button>
+
               <Button
-                className="rounded-full bg-[#C7AD96] px-5 text-[#2D2A26] hover:bg-[#D7C6AE]"
+                className="rounded-full border border-[#6685FF]/50 bg-[#5B74F7] px-5 font-semibold text-white shadow-[0_10px_30px_rgba(82,125,255,0.30)] hover:bg-[#6B80FF] hover:text-white disabled:border-[#30456F]/50 disabled:bg-[#172442] disabled:text-[#7385A8] disabled:opacity-100"
+                style={{
+                  background: creating
+                    ? '#172442'
+                    : 'linear-gradient(90deg, #527DFF 0%, #6078FF 50%, #786CFF 100%)',
+                  color: creating ? '#7385A8' : '#FFFFFF',
+                }}
                 onClick={() => void handleCreate()}
                 disabled={creating}
               >
-                {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PanelRightOpen className="mr-2 h-4 w-4" />}
+                {creating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <PanelRightOpen className="mr-2 h-4 w-4" />
+                )}
                 {creating ? t.creating : t.create}
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-4 rounded-[22px] border border-black/10 bg-white/76 p-5 shadow-[0_20px_64px_-48px_rgba(42,38,33,0.24)] backdrop-blur-xl">
+        <div className="flex min-h-0 flex-col gap-4 rounded-[22px] border border-[#30456F]/60 bg-[#0D1935]/95 p-5 shadow-[0_20px_64px_-48px_rgba(0,0,0,0.68)] backdrop-blur-xl">
           <ProjectDisplayPreviewCard
             title={title.trim() || t.titlePlaceholder}
             subtitle={t.previewSubtitle}
@@ -484,8 +524,11 @@ export function CreateCopilotProjectDialog(props: {
             backgroundStyle={backgroundStyle}
             modeLabel={t.previewTitle}
           />
-          <div className="rounded-[22px] border border-black/8 bg-white/72 px-4 py-4 text-sm leading-6 text-[#5D5A55]">
-            <div className="font-medium text-[#2D2A26]">{title.trim() || t.titlePlaceholder}</div>
+
+          <div className="rounded-[22px] border border-[#30456F]/60 bg-[#101D3B] px-4 py-4 text-sm leading-6 text-[#AAB8D4]">
+            <div className="font-medium text-[#F4F7FF]">
+              {title.trim() || t.titlePlaceholder}
+            </div>
             <div className="mt-2">{selectedConnectorLabel}</div>
           </div>
         </div>

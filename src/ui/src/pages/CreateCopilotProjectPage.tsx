@@ -1,19 +1,19 @@
-import { ChevronDown, Loader2, PanelRightOpen } from 'lucide-react'
 import * as React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Loader2, PanelRightOpen } from 'lucide-react'
 
 import { ConnectorTargetRadioGroup, type ConnectorTargetRadioItem } from '@/components/connectors/ConnectorTargetRadioGroup'
+import { OverlayDialog } from '@/components/home/OverlayDialog'
 import { ProjectDisplayPreviewCard } from '@/components/projects/ProjectDisplayPreviewCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { client } from '@/lib/api'
 import { connectorTargetLabel, normalizeConnectorTargets } from '@/lib/connectors'
+import type { QuestMessageAttachmentDraft } from '@/lib/hooks/useQuestMessageAttachments'
 import { useI18n } from '@/lib/i18n'
 import {
   PROJECT_ACCENT_OPTIONS,
   PROJECT_BACKGROUND_STYLE_OPTIONS,
   PROJECT_TEMPLATE_OPTIONS,
-  resolveProjectAccent,
   type ProjectAccentId,
   type ProjectBackgroundStyleId,
   type ProjectTemplateId,
@@ -21,142 +21,77 @@ import {
 import { cn } from '@/lib/utils'
 import type { ConnectorSnapshot } from '@/types'
 
-type CopilotLocale = 'en' | 'zh'
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'))
+    reader.onload = () => {
+      const result = String(reader.result || '')
+      const base64 = result.includes(',') ? result.split(',', 2)[1] : result
+      resolve(base64)
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 const copy = {
   en: {
-    eyebrow: 'Copilot Workspace',
-    title: 'Create a quieter workspace first',
-    body: 'Pick a starter card, optionally bind one connector, and open a copilot project that waits for your first instruction.',
-    titleLabel: 'Project title',
-    titleHint: 'Optional. If left empty, a default title will be generated from the selected card.',
-    titlePlaceholder: 'Optional custom title',
-    templateLabel: 'Starter card',
-    templateHint: 'Choose the default card surface. The preview updates immediately.',
+    title: 'Copilot Setup',
+    body: 'Fits any research task that only needs lightweight assistance.',
+    essentialsTitle: 'Essentials',
+    essentialsHint: 'A title and one connector are enough.',
+    advancedTitle: 'Advanced options',
+    advancedHint: 'Background, card type, and accent.',
+    advancedShow: 'Show advanced options',
+    advancedHide: 'Hide advanced options',
+    titleLabel: 'Title',
+    titlePlaceholder: 'A short project title',
+    templateLabel: 'Card type',
     backgroundLabel: 'Card background',
     accentLabel: 'Accent color',
     connectorLabel: 'Connector binding',
     connectorHint: 'Optional. Bind one connector target now, or keep this project local-only.',
     localOnly: 'Local only',
-    localOnlyBody: 'Keep this workspace local for now. You can bind an external connector later.',
-    create: 'Create selected project',
+    create: 'Create project',
     creating: 'Creating…',
-    cancel: 'Back',
-    required: 'Unable to resolve a project title.',
+    cancel: 'Cancel',
+    back: 'Back',
+    required: 'Title is required.',
     loadingConnectors: 'Loading connector targets…',
-    noConnectors: 'No connector target is available yet. The project will stay local-only until you bind one later.',
-    advancedTitle: 'Advanced options',
-    advancedHint: 'Background and accent stay here.',
-    advancedShow: 'Show advanced options',
-    advancedHide: 'Hide advanced options',
-    selectedBadge: 'Selected',
-    previewMeta: 'Idle by default',
-    previewSubtitle: 'DeepScientist waits for your first message instead of auto-running after creation.',
-    previewAsideTitle: 'Live preview',
-    previewAsideBody: 'You can create with just the selected starter card. Title and accent are optional refinements.',
+    noConnectors: 'No connector target available yet. The project will stay local-only until you bind one later.',
+    previewTitle: 'Copilot',
+    previewSubtitle: 'Waits for your first message.',
   },
   zh: {
-    eyebrow: 'Copilot 工作区',
-    title: '先创建一个安静待命的工作区',
-    body: '先选一个默认卡片，可选绑定一个 connector，然后进入一个等待你第一条指令的 copilot 项目。',
-    titleLabel: '项目标题',
-    titleHint: '可选。不填写时，会根据当前选中的卡片自动生成默认标题。',
-    titlePlaceholder: '可选的自定义标题',
-    templateLabel: '默认卡片',
-    templateHint: '先选一个默认卡片表面，右侧预览会立刻跟随变化。',
+    title: 'Copilot 配置',
+    body: '适合任何需要简单辅助的科研任务',
+    essentialsTitle: '必要信息',
+    essentialsHint: '标题和一个 connector 就够了。',
+    advancedTitle: '高级设置',
+    advancedHint: '背景、卡片类型和强调色都在这里。',
+    advancedShow: '展开高级设置',
+    advancedHide: '收起高级设置',
+    titleLabel: '标题',
+    titlePlaceholder: '输入一个简短项目标题',
+    templateLabel: '卡片类型',
     backgroundLabel: '卡片背景',
     accentLabel: '强调色',
     connectorLabel: '绑定 Connector',
     connectorHint: '可选。现在绑定一个目标，或者先保持本地模式。',
     localOnly: '仅本地',
-    localOnlyBody: '先保持在本地工作区里。之后需要时，再绑定外部 connector 即可。',
-    create: '创建当前项目',
+    create: '一键新建',
     creating: '创建中…',
-    cancel: '返回',
-    required: '无法生成项目标题。',
+    cancel: '取消',
+    back: '返回',
+    required: '标题不能为空。',
     loadingConnectors: '正在加载可绑定目标…',
     noConnectors: '暂时没有可绑定目标。项目会先保持本地模式，之后也可以再绑定。',
-    advancedTitle: '高级设置',
-    advancedHint: '背景和强调色都放在这里。',
-    advancedShow: '展开高级设置',
-    advancedHide: '收起高级设置',
-    selectedBadge: '已选中',
-    previewMeta: '默认待命',
-    previewSubtitle: 'DeepScientist 会等待你的第一条消息，而不是创建后立刻自动运行。',
-    previewAsideTitle: '即时预览',
-    previewAsideBody: '只选默认卡片就可以创建。标题和强调色只是可选微调，不再强迫一开始填太多。',
+    previewTitle: '协作模式',
+    previewSubtitle: '等待你的第一条消息。',
   },
 } as const
 
-const templateLocaleCopy: Record<CopilotLocale, Record<ProjectTemplateId, { label: string; description: string; defaultTitle: string }>> = {
-  en: {
-    blank: {
-      label: 'Blank workspace',
-      description: 'A quiet general-purpose copilot surface. Decide the flow later.',
-      defaultTitle: 'New Copilot Workspace',
-    },
-    experiment: {
-      label: 'Experiment board',
-      description: 'A good default for implementation, debugging, and running experiments from chat.',
-      defaultTitle: 'Experiment Copilot',
-    },
-    literature: {
-      label: 'Literature desk',
-      description: 'A reading-first surface for paper comparison, note taking, and collecting evidence.',
-      defaultTitle: 'Literature Copilot',
-    },
-    analysis: {
-      label: 'Analysis deck',
-      description: 'A log- and result-oriented surface for review, diagnosis, and follow-up checks.',
-      defaultTitle: 'Analysis Copilot',
-    },
-  },
-  zh: {
-    blank: {
-      label: '空白工作区',
-      description: '一个安静的通用 copilot 表面，先进入工作区，后面再决定具体路线。',
-      defaultTitle: '新的 Copilot 工作区',
-    },
-    experiment: {
-      label: '实验面板',
-      description: '更适合实现、调试、跑实验，以及在聊天里持续推进执行。',
-      defaultTitle: '实验 Copilot',
-    },
-    literature: {
-      label: '文献桌面',
-      description: '更适合读论文、对比 baseline、做摘录和整理证据。',
-      defaultTitle: '文献 Copilot',
-    },
-    analysis: {
-      label: '分析视图',
-      description: '更适合看日志、结果、trace 和后续检查。',
-      defaultTitle: '分析 Copilot',
-    },
-  },
-}
-
-const accentLocaleLabels: Record<CopilotLocale, Record<ProjectAccentId, string>> = {
-  en: {
-    graphite: 'Graphite',
-    sage: 'Sage',
-    clay: 'Clay',
-    mist: 'Mist',
-    rose: 'Rose',
-  },
-  zh: {
-    graphite: '石墨',
-    sage: '鼠尾草',
-    clay: '陶土',
-    mist: '薄雾',
-    rose: '玫瑰',
-  },
-}
-
-function defaultCopilotProjectTitle(locale: CopilotLocale, template: ProjectTemplateId) {
-  return templateLocaleCopy[locale][template].defaultTitle
-}
-
-function formatBoundQuestLabel(snapshot: ConnectorSnapshot, targetConversationId: string | null, locale: CopilotLocale) {
+function formatBoundQuestLabel(snapshot: ConnectorSnapshot, targetConversationId: string | null, locale: 'en' | 'zh') {
   const matchingBinding = (snapshot.bindings || []).find((item) => {
     return String(item.conversation_id || '').trim() === String(targetConversationId || '').trim()
   })
@@ -165,14 +100,17 @@ function formatBoundQuestLabel(snapshot: ConnectorSnapshot, targetConversationId
   return locale === 'zh' ? `当前绑定到 ${boundQuestId}` : `Currently bound to ${boundQuestId}`
 }
 
-function buildConnectorItems(connectors: ConnectorSnapshot[], locale: CopilotLocale, localOnlyBody: string): ConnectorTargetRadioItem[] {
+function buildConnectorItems(connectors: ConnectorSnapshot[], locale: 'en' | 'zh'): ConnectorTargetRadioItem[] {
   const items: ConnectorTargetRadioItem[] = [
     {
       value: '__local__',
       connectorName: 'local',
       connectorLabel: locale === 'zh' ? '仅本地' : 'Local only',
       targetId: '',
-      boundQuestLabel: localOnlyBody,
+      boundQuestLabel:
+        locale === 'zh'
+          ? '创建后先停驻在本地工作区，后续可以随时再绑定外部连接。'
+          : 'Keep the project local-only for now. You can bind an external connector later.',
       localOnly: true,
     },
   ]
@@ -195,70 +133,80 @@ function buildConnectorItems(connectors: ConnectorSnapshot[], locale: CopilotLoc
   return items
 }
 
-export function CreateCopilotProjectPage() {
-  const navigate = useNavigate()
+export function CreateCopilotProjectDialog(props: {
+  open: boolean
+  onClose: () => void
+  onBack?: () => void
+  initialTitle?: string
+  initialMessage?: string
+  initialSetupQuestId?: string | null
+  initialSetupAttachments?: Array<Record<string, unknown>>
+  initialLocalAttachments?: QuestMessageAttachmentDraft[]
+  onCreated: (questId: string) => void
+}) {
   const { locale } = useI18n()
-  const uiLocale: CopilotLocale = locale === 'zh' ? 'zh' : 'en'
-  const t = copy[uiLocale]
-  const [title, setTitle] = React.useState('')
+  const t = locale === 'zh' ? copy.zh : copy.en
+  const [title, setTitle] = React.useState(props.initialTitle || '')
   const [template, setTemplate] = React.useState<ProjectTemplateId>('blank')
-  const [accentColor, setAccentColor] = React.useState<ProjectAccentId>('graphite')
   const [backgroundStyle, setBackgroundStyle] = React.useState<ProjectBackgroundStyleId>('paper')
+  const [accentColor, setAccentColor] = React.useState<ProjectAccentId>('graphite')
   const [connectorItems, setConnectorItems] = React.useState<ConnectorTargetRadioItem[]>([
     {
       value: '__local__',
       connectorName: 'local',
       connectorLabel: t.localOnly,
       targetId: '',
-      boundQuestLabel: t.localOnlyBody,
+      boundQuestLabel:
+        locale === 'zh'
+          ? '创建后先停驻在本地工作区，后续可以随时再绑定外部连接。'
+          : 'Keep the project local-only for now. You can bind an external connector later.',
       localOnly: true,
     },
   ])
   const [selectedConnector, setSelectedConnector] = React.useState('__local__')
-  const [connectorsLoading, setConnectorsLoading] = React.useState(true)
-  const [showAdvanced, setShowAdvanced] = React.useState(false)
+  const [connectorsLoading, setConnectorsLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [creating, setCreating] = React.useState(false)
-
-  const localizedTemplateOptions = React.useMemo(
-    () =>
-      PROJECT_TEMPLATE_OPTIONS.map((item) => ({
-        ...item,
-        label: templateLocaleCopy[uiLocale][item.id].label,
-        description: templateLocaleCopy[uiLocale][item.id].description,
-      })),
-    [uiLocale]
-  )
-
-  const localizedAccentOptions = React.useMemo(
-    () =>
-      PROJECT_ACCENT_OPTIONS.map((item) => ({
-        ...item,
-        label: accentLocaleLabels[uiLocale][item.id],
-      })),
-    [uiLocale]
-  )
+  const [showAdvanced, setShowAdvanced] = React.useState(false)
 
   React.useEffect(() => {
+    if (!props.open) {
+      return
+    }
     let active = true
     setConnectorsLoading(true)
     void client
       .connectors()
       .then((payload) => {
         if (!active) return
-        setConnectorItems(buildConnectorItems(payload, uiLocale, t.localOnlyBody))
+        setConnectorItems(buildConnectorItems(payload, locale))
       })
       .catch((caught) => {
         if (!active) return
         console.error('Failed to load connectors for Copilot project creation:', caught)
       })
       .finally(() => {
-        if (active) setConnectorsLoading(false)
+        if (active) {
+          setConnectorsLoading(false)
+        }
       })
     return () => {
       active = false
     }
-  }, [t.localOnlyBody, uiLocale])
+  }, [locale, props.open])
+
+  React.useEffect(() => {
+    if (!props.open) {
+      setError(null)
+      setCreating(false)
+      setShowAdvanced(false)
+    }
+  }, [props.open])
+
+  React.useEffect(() => {
+    if (!props.open) return
+    setTitle(props.initialTitle || '')
+  }, [props.initialTitle, props.open])
 
   const selectedConnectorBinding = React.useMemo(() => {
     if (!selectedConnector || selectedConnector === '__local__') return []
@@ -271,14 +219,8 @@ export function CreateCopilotProjectPage() {
     return connectorItems.find((item) => item.value === selectedConnector)?.connectorLabel || t.localOnly
   }, [connectorItems, selectedConnector, t.localOnly])
 
-  const resolvedTitle = React.useMemo(() => {
-    return title.trim() || defaultCopilotProjectTitle(uiLocale, template)
-  }, [template, title, uiLocale])
-
-  const accent = resolveProjectAccent(accentColor)
-
   const handleCreate = React.useCallback(async () => {
-    const normalizedTitle = resolvedTitle.trim()
+    const normalizedTitle = title.trim()
     if (!normalizedTitle) {
       setError(t.required)
       return
@@ -301,7 +243,8 @@ export function CreateCopilotProjectPage() {
           custom_profile: 'freeform',
           launch_form_source: 'copilot_manual',
           launch_form_recorded_at: new Date().toISOString(),
-          launch_markdown: normalizedTitle,
+          launch_setup_quest_id: props.initialSetupQuestId || null,
+          launch_markdown: String(props.initialMessage || '').trim() || normalizedTitle,
           project_display: {
             template,
             accent_color: accentColor,
@@ -309,70 +252,161 @@ export function CreateCopilotProjectPage() {
           },
         },
       })
-      navigate(`/projects/${result.snapshot.quest_id}`)
+      const importedPayload =
+        props.initialSetupQuestId && Array.isArray(props.initialSetupAttachments) && props.initialSetupAttachments.length > 0
+          ? await client.importQuestChatAttachments(result.snapshot.quest_id, {
+              source_quest_id: props.initialSetupQuestId,
+              attachments: props.initialSetupAttachments.map((item) => ({
+                name: item.label || item.name || item.file_name,
+                file_name: item.label || item.file_name || item.name,
+                content_type: item.contentType || item.content_type || item.mime_type || null,
+                quest_relative_path: item.questRelativePath || item.quest_relative_path || null,
+                path: item.path || null,
+              })),
+            })
+          : null
+      if (importedPayload && !importedPayload.ok) {
+        throw new Error(importedPayload.message || 'Failed to import setup attachments.')
+      }
+      const importedDraftIdsNormalized = (importedPayload?.attachments || [])
+        .map((item) => String(item.draft_id || '').trim())
+        .filter(Boolean)
+      const localDraftIds: string[] = []
+      for (const attachment of props.initialLocalAttachments || []) {
+        if (attachment.status !== 'success' || !attachment.file) continue
+        const contentBase64 = await fileToBase64(attachment.file)
+        const payload = await client.uploadChatAttachment(result.snapshot.quest_id, {
+          draft_id: attachment.draftId,
+          file_name: attachment.name,
+          mime_type: attachment.contentType || undefined,
+          content_base64: contentBase64,
+        })
+        if (payload.ok && payload.draft_id) {
+          localDraftIds.push(String(payload.draft_id))
+        }
+      }
+      const seedMessage = String(props.initialMessage || '').trim()
+      if (seedMessage || importedDraftIdsNormalized.length > 0 || localDraftIds.length > 0) {
+        await client.sendChat(
+          result.snapshot.quest_id,
+          seedMessage || normalizedTitle,
+          undefined,
+          undefined,
+          [...importedDraftIdsNormalized, ...localDraftIds]
+        )
+      }
+      props.onCreated(result.snapshot.quest_id)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Failed to create project.')
     } finally {
       setCreating(false)
     }
-  }, [accentColor, backgroundStyle, navigate, resolvedTitle, selectedConnectorBinding, t.required, template])
+  }, [
+    accentColor,
+    backgroundStyle,
+    props,
+    selectedConnectorBinding,
+    t.required,
+    template,
+    title,
+  ])
 
   return (
-    <div className="min-h-screen bg-[#F4EFE8] font-project text-[#2D2A26]">
+    <OverlayDialog
+      open={props.open}
+      title={t.title}
+      description={t.body}
+      onClose={props.onClose}
+      className="h-[90svh] w-[96vw] max-w-none rounded-[32px] border border-[#31476F]/70 bg-[#09142C] text-[#F4F7FF] shadow-[0_40px_120px_-52px_rgba(0,0,0,0.82)] lg:w-[88vw]"
+    >
       <div
-        className="feed-scrollbar min-h-screen overflow-y-auto px-5 py-6 sm:px-6 sm:py-8"
+        className="feed-scrollbar grid h-full min-h-0 gap-5 overflow-y-auto p-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:p-5"
         style={{
           backgroundImage:
-            'radial-gradient(880px circle at 10% 12%, rgba(217, 202, 186, 0.28), transparent 58%), radial-gradient(760px circle at 88% 0%, rgba(173, 189, 201, 0.22), transparent 52%), linear-gradient(180deg, #F7F3ED 0%, #F0E9DF 100%)',
+            'radial-gradient(800px circle at 8% 10%, rgba(59,130,246,0.12), transparent 56%), radial-gradient(700px circle at 92% 8%, rgba(124,58,237,0.10), transparent 52%), linear-gradient(180deg, rgba(9,20,44,0.98), rgba(7,17,38,0.98))',
         }}
       >
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-wrap items-start justify-between gap-4 pb-6">
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-[0.22em] text-[#8A8278]">{t.eyebrow}</div>
-              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">{t.title}</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5D5A55]">{t.body}</p>
+        <div className="rounded-[22px] border border-[#30456F]/60 bg-[#0D1935]/95 p-5 shadow-[0_20px_64px_-48px_rgba(0,0,0,0.72)] backdrop-blur-xl">
+          <div className="grid gap-6">
+            <div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                {t.titleLabel}
+              </div>
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder={t.titlePlaceholder}
+                className="h-12 rounded-[18px] border-[#30456F]/70 bg-[#08142D] text-base text-[#F4F7FF] placeholder:text-[#7286AC] caret-white focus-visible:ring-[#6685FF]/40 dark:text-[#F4F7FF] dark:placeholder:text-[#7286AC]"
+              />
             </div>
-            <Button
-              variant="outline"
-              className="rounded-full border-black/10 bg-white/72 px-5"
-              onClick={() => navigate('/projects')}
-            >
-              {t.cancel}
-            </Button>
-          </div>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-            <div className="rounded-[32px] border border-white/10 bg-[rgba(252,248,242,0.96)] p-5 shadow-[0_36px_100px_-56px_rgba(15,23,42,0.34)] backdrop-blur-xl sm:p-6">
-              <div className="grid gap-6">
+            <div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                {t.connectorLabel}
+              </div>
+              <div className="mb-4 text-sm leading-6 text-[#AAB8D4]">
+                {t.connectorHint}
+              </div>
+
+              {connectorsLoading ? (
+                <div className="flex items-center gap-3 rounded-[22px] border border-[#30456F]/60 bg-[#101D3B] px-4 py-4 text-sm text-[#AAB8D4]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t.loadingConnectors}
+                </div>
+              ) : connectorItems.length <= 1 ? (
+                <div className="rounded-[22px] border border-[#30456F]/60 bg-[#101D3B] px-4 py-4 text-sm leading-6 text-[#AAB8D4]">
+                  {t.noConnectors}
+                </div>
+              ) : (
+                <ConnectorTargetRadioGroup
+                  items={connectorItems}
+                  value={selectedConnector}
+                  onChange={setSelectedConnector}
+                  ariaLabel={t.connectorLabel}
+                />
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((current) => !current)}
+              className="flex items-center justify-between rounded-[16px] border border-[#30456F]/60 bg-[#101D3B] px-4 py-3 text-left transition hover:bg-[#142548]"
+            >
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                  {t.advancedTitle}
+                </div>
+                <div className="mt-1 text-[11px] leading-5 text-[#AAB8D4]">
+                  {showAdvanced ? t.advancedHide : t.advancedHint}
+                </div>
+              </div>
+              <div className="text-[12px] font-medium text-[#D7E2F8]">
+                {showAdvanced ? t.advancedHide : t.advancedShow}
+              </div>
+            </button>
+
+            {showAdvanced ? (
+              <div className="grid gap-5 rounded-[20px] border border-[#30456F]/50 bg-[#0A1630]/70 p-4">
                 <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">
-                    {t.templateLabel}
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                    {t.backgroundLabel}
                   </div>
-                  <div className="mb-4 text-sm leading-6 text-[#5D5A55]">{t.templateHint}</div>
                   <div className="grid gap-3 md:grid-cols-2">
-                    {localizedTemplateOptions.map((item) => (
+                    {PROJECT_BACKGROUND_STYLE_OPTIONS.map((item) => (
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() => setTemplate(item.id)}
+                        onClick={() => setBackgroundStyle(item.id)}
                         className={cn(
                           'rounded-[22px] border px-4 py-4 text-left transition',
-                          template === item.id
-                            ? 'border-black/15 bg-[#F4EEE6] shadow-[0_16px_34px_-24px_rgba(42,38,33,0.3)]'
-                            : 'border-black/8 bg-white/72 hover:border-black/12 hover:bg-white'
+                          backgroundStyle === item.id
+                            ? 'border-[#6685FF]/60 bg-[#162A55] text-[#F4F7FF] shadow-[0_16px_34px_-24px_rgba(78,112,255,0.60)]'
+                            : 'border-[#30456F]/60 bg-[#101D3B] text-[#E6EDFF] hover:border-[#5876B8] hover:bg-[#142548]'
                         )}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-sm font-semibold">{item.label}</div>
-                            <div className="mt-2 text-xs leading-5 text-[#5D5A55]">{item.description}</div>
-                          </div>
-                          {template === item.id ? (
-                            <span className="rounded-full border border-black/10 bg-white/86 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-[#6D5946]">
-                              {t.selectedBadge}
-                            </span>
-                          ) : null}
+                        <div className="text-sm font-semibold">{item.label}</div>
+                        <div className="mt-2 text-xs leading-5 text-[#AAB8D4]">
+                          {item.description}
                         </div>
                       </button>
                     ))}
@@ -380,156 +414,125 @@ export function CreateCopilotProjectPage() {
                 </div>
 
                 <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">
-                    {t.connectorLabel}
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                    {t.templateLabel}
                   </div>
-                  <div className="mb-4 text-sm leading-6 text-[#5D5A55]">{t.connectorHint}</div>
-                  {connectorsLoading ? (
-                    <div className="flex items-center gap-3 rounded-[22px] border border-black/8 bg-white/72 px-4 py-4 text-sm text-[#5D5A55]">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t.loadingConnectors}
-                    </div>
-                  ) : connectorItems.length <= 1 ? (
-                    <div className="rounded-[22px] border border-black/8 bg-white/72 px-4 py-4 text-sm leading-6 text-[#5D5A55]">
-                      {t.noConnectors}
-                    </div>
-                  ) : (
-                    <div className="max-h-[320px] overflow-y-auto pr-1">
-                      <ConnectorTargetRadioGroup
-                        items={connectorItems}
-                        value={selectedConnector}
-                        onChange={setSelectedConnector}
-                        ariaLabel={t.connectorLabel}
-                      />
-                    </div>
-                  )}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {PROJECT_TEMPLATE_OPTIONS.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setTemplate(item.id)}
+                        className={cn(
+                          'rounded-[22px] border px-4 py-4 text-left transition',
+                          template === item.id
+                            ? 'border-[#6685FF]/60 bg-[#162A55] text-[#F4F7FF] shadow-[0_16px_34px_-24px_rgba(78,112,255,0.60)]'
+                            : 'border-[#30456F]/60 bg-[#101D3B] text-[#E6EDFF] hover:border-[#5876B8] hover:bg-[#142548]'
+                        )}
+                      >
+                        <div className="text-sm font-semibold">{item.label}</div>
+                        <div className="mt-2 text-xs leading-5 text-[#AAB8D4]">
+                          {item.description}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">
-                    {t.titleLabel}
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#9DB1D8]">
+                    {t.accentLabel}
                   </div>
-                  <Input
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder={t.titlePlaceholder}
-                    className="h-12 rounded-[18px] border-black/10 bg-white/80 text-base text-black placeholder:text-[rgba(107,103,97,0.72)] caret-black dark:text-black dark:placeholder:text-[rgba(107,103,97,0.72)]"
-                  />
-                  <div className="mt-2 text-sm leading-6 text-[#5D5A55]">{t.titleHint}</div>
+                  <div className="flex flex-wrap gap-3">
+                    {PROJECT_ACCENT_OPTIONS.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setAccentColor(item.id)}
+                        className={cn(
+                          'flex items-center gap-3 rounded-full border px-4 py-2.5 text-sm transition',
+                          accentColor === item.id
+                            ? 'border-[#6685FF]/70 bg-[#1A2E5B] text-white shadow-[0_14px_28px_-24px_rgba(78,112,255,0.70)]'
+                            : 'border-[#30456F]/60 bg-[#101D3B] text-[#E6EDFF] hover:border-[#5876B8] hover:bg-[#142548]'
+                        )}
+                      >
+                        <span className={cn('h-3 w-3 rounded-full', item.dotClassName)} />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              </div>
+            ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced((current) => !current)}
-                  className="flex items-center justify-between rounded-[20px] border border-[rgba(126,108,82,0.12)] bg-[rgba(244,239,233,0.72)] px-4 py-3 text-left transition hover:bg-white"
+            {error ? (
+              <div className="rounded-[18px] border border-rose-400/25 bg-rose-950/35 px-4 py-3 text-sm text-rose-300">
+                {error}
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap items-center gap-3">
+              {props.onBack ? (
+                <Button
+                  variant="outline"
+                  className="rounded-full border-[#30456F]/70 bg-[#101D3B] px-5 text-[#E6EDFF] hover:bg-[#17284E] hover:text-white"
+                  onClick={props.onBack}
+                  disabled={creating}
                 >
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7A746C]">{t.advancedTitle}</div>
-                    <div className="mt-1 text-sm leading-6 text-[#5D5A55]">{showAdvanced ? t.advancedHide : t.advancedHint}</div>
-                  </div>
-                  <div className="inline-flex items-center gap-2 text-sm font-medium text-[#4A4742]">
-                    <span>{showAdvanced ? t.advancedHide : t.advancedShow}</span>
-                    <ChevronDown className={cn('h-4 w-4 transition', showAdvanced && 'rotate-180')} />
-                  </div>
-                </button>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {t.back}
+                </Button>
+              ) : null}
 
-                {showAdvanced ? (
-                  <div className="grid gap-5">
-                    <div>
-                      <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">
-                        {t.backgroundLabel}
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {PROJECT_BACKGROUND_STYLE_OPTIONS.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => setBackgroundStyle(item.id)}
-                            className={cn(
-                              'rounded-[18px] border px-4 py-3 text-left transition',
-                              backgroundStyle === item.id
-                                ? 'border-black/15 bg-[#F4EEE6] shadow-[0_16px_34px_-24px_rgba(42,38,33,0.3)]'
-                                : 'border-black/8 bg-white/72 hover:border-black/12 hover:bg-white'
-                            )}
-                          >
-                            <div className="text-sm font-semibold">{item.label}</div>
-                            <div className="mt-1 text-xs leading-5 text-[#5D5A55]">{item.description}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">
-                        {t.accentLabel}
-                      </div>
-                      <div className="flex flex-wrap gap-3">
-                        {localizedAccentOptions.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => setAccentColor(item.id)}
-                            className={cn(
-                              'flex items-center gap-3 rounded-full border px-4 py-2.5 text-sm transition',
-                              accentColor === item.id
-                                ? 'border-black/15 bg-white shadow-[0_14px_28px_-24px_rgba(42,38,33,0.4)]'
-                                : 'border-black/8 bg-white/70 hover:border-black/12 hover:bg-white/90'
-                            )}
-                          >
-                            <span className={cn('h-3 w-3 rounded-full', item.dotClassName)} />
-                            {item.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
+              <Button
+                variant="ghost"
+                className="rounded-full px-5 text-[#D7E2F8] hover:bg-[#142548] hover:text-white"
+                onClick={props.onClose}
+                disabled={creating}
+              >
+                {t.cancel}
+              </Button>
 
-                {error ? (
-                  <div className="rounded-[18px] border border-rose-400/25 bg-rose-50/80 px-4 py-3 text-sm text-rose-700">
-                    {error}
-                  </div>
-                ) : null}
-
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[22px] border border-[rgba(126,108,82,0.12)] bg-[rgba(244,239,233,0.62)] px-4 py-4">
-                  <div className="text-sm leading-6 text-[#5D5A55]">
-                    <div className="font-medium text-[#2D2A26]">{selectedConnectorLabel}</div>
-                    <div>{resolvedTitle}</div>
-                  </div>
-                  <Button
-                    onClick={() => void handleCreate()}
-                    disabled={creating}
-                    className="h-12 rounded-full bg-[#C7AD96] px-6 text-[#2D2A26] hover:bg-[#D7C6AE]"
-                  >
-                    {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PanelRightOpen className="mr-2 h-4 w-4" />}
-                    {creating ? t.creating : t.create}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4 lg:sticky lg:top-8">
-              <ProjectDisplayPreviewCard
-                title={resolvedTitle}
-                subtitle={t.previewSubtitle}
-                template={template}
-                accentColor={accent.id}
-                backgroundStyle={backgroundStyle}
-                meta={t.previewMeta}
-                modeLabel="Copilot"
-              />
-              <div className="rounded-[28px] border border-white/10 bg-[rgba(252,248,242,0.94)] p-5 text-sm leading-6 text-[#5D5A55] shadow-[0_28px_82px_-54px_rgba(15,23,42,0.24)] backdrop-blur-xl">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A8278]">
-                  <PanelRightOpen className="h-4 w-4" />
-                  {t.previewAsideTitle}
-                </div>
-                <div className="mt-4">{t.previewAsideBody}</div>
-              </div>
+              <Button
+                className="rounded-full border border-[#6685FF]/50 bg-[#5B74F7] px-5 font-semibold text-white shadow-[0_10px_30px_rgba(82,125,255,0.30)] hover:bg-[#6B80FF] hover:text-white disabled:border-[#30456F]/50 disabled:bg-[#172442] disabled:text-[#7385A8] disabled:opacity-100"
+                style={{
+                  background: creating
+                    ? '#172442'
+                    : 'linear-gradient(90deg, #527DFF 0%, #6078FF 50%, #786CFF 100%)',
+                  color: creating ? '#7385A8' : '#FFFFFF',
+                }}
+                onClick={() => void handleCreate()}
+                disabled={creating}
+              >
+                {creating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <PanelRightOpen className="mr-2 h-4 w-4" />
+                )}
+                {creating ? t.creating : t.create}
+              </Button>
             </div>
           </div>
         </div>
+
+        <div className="flex min-h-0 flex-col gap-4 rounded-[22px] border border-[#30456F]/60 bg-[#0D1935]/95 p-5 shadow-[0_20px_64px_-48px_rgba(0,0,0,0.68)] backdrop-blur-xl">
+          <ProjectDisplayPreviewCard
+            title={title.trim() || t.titlePlaceholder}
+            subtitle={t.previewSubtitle}
+            template={template}
+            accentColor={accentColor}
+            backgroundStyle={backgroundStyle}
+            modeLabel={t.previewTitle}
+          />
+
+          <div className="rounded-[22px] border border-[#30456F]/60 bg-[#101D3B] px-4 py-4 text-sm leading-6 text-[#AAB8D4]">
+            <div className="font-medium text-[#F4F7FF]">
+              {title.trim() || t.titlePlaceholder}
+            </div>
+            <div className="mt-2">{selectedConnectorLabel}</div>
+          </div>
+        </div>
       </div>
-    </div>
+    </OverlayDialog>
   )
 }
-
-export default CreateCopilotProjectPage
