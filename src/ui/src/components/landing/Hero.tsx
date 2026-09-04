@@ -548,17 +548,22 @@ export default function Hero(props: {
   className="flex items-center gap-3 text-left"
   onClick={() => navigate('/')}
 >
-  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 shadow-[0_0_30px_rgba(34,211,238,0.12)]">
-    <Sparkles className="h-5 w-5 text-cyan-200" />
+  <div className="h-10 w-10 overflow-hidden rounded-2xl border border-cyan-300/20 bg-white shadow-[0_0_30px_rgba(34,211,238,0.12)]">
+    <img
+      src={`${import.meta.env.BASE_URL}metis-research-logo.jpg`}
+      alt="Metis Research"
+      className="h-full w-full object-cover"
+      draggable={false}
+    />
   </div>
 
   <div>
     <div className="text-sm font-semibold tracking-[0.08em] text-white">
-      AI SCIENTIST
+      Metis Research
     </div>
 
-    <div className="text-[10px] uppercase tracking-[0.28em] text-blue-200/55">
-      Research Intelligence
+    <div className="text-[10px] uppercase tracking-[0.24em] text-blue-200/55">
+      RESEARCH · MEMORY · EVALUATION
     </div>
   </div>
 </button>
@@ -626,22 +631,22 @@ export default function Hero(props: {
                   <div>
                     <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/[0.07] px-3.5 py-1.5 text-[11px] uppercase tracking-[0.18em] text-cyan-100">
                       <Sparkles className="h-3.5 w-3.5" />
-                      {locale === 'zh' ? 'AI SCIENTIST · 智能科研平台' : 'AI SCIENTIST · RESEARCH PLATFORM'}
+                      {locale === 'zh' ? 'Metis Research · 记忆增强迭代科研平台' : 'Metis Research · ITERATIVE SCIENCE PLATFORM'}
                     </div>
 
                     <div className="mt-5 space-y-3">
                     <p className="text-[12px] uppercase tracking-[0.18em] text-cyan-200/75 md:text-[13px]">
-                      QWEN · MULTI-AGENT · SCIENTIFIC DISCOVERY
+                      QWEN · MEMORY · EVALUATION · TREE SEARCH
                     </p>
-                    <h1 className="max-w-lg text-[30px] font-semibold leading-[1.12] tracking-tight text-white md:text-[40px]">
+                   <h1 className="max-w-lg text-[24px] font-semibold leading-[1.15] tracking-tight text-white md:text-[30px]">
                       {locale === 'zh'
-                        ? '面向科学发现的智能研究系统'
-                        : 'Intelligent Research for Scientific Discovery'}
+                        ?  '基于Qwen的记忆增强、证据评价与树搜索迭代科研平台'
+                        : 'Memory-enhanced Evaluation and Tree-search for Iterative Science'}
                     </h1>
                     <p className="max-w-lg text-[13px] leading-6 text-slate-200/78">
                       {locale === 'zh'
-                        ? '融合文献检索、科研记忆、假设生成、智能审辩与实验规划，构建从科研问题到可验证科学假设的完整闭环。'
-                        : 'Integrating literature retrieval, scientific memory, hypothesis generation, agent critique and experiment planning into one verifiable research loop.'}
+                        ? '以科研记忆、证据评价与树搜索迭代为核心，融合文献检索、假设生成、多智能体审辩与实验规划，构建从科研问题到可验证科学假设的完整闭环。'
+                        : 'Powered by Qwen, Metis Research combines scientific memory, evidence evaluation, iterative tree search, literature retrieval, hypothesis generation, multi-agent critique, and experiment planning into a verifiable research loop.'}
                     </p>
                     </div>
                   </div>
@@ -702,7 +707,7 @@ export default function Hero(props: {
                     </Button>
                   </div>
 
-                  <div className="mt-auto grid grid-cols-2 gap-2.5 pt-5 sm:grid-cols-4">
+                  <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                     {[
                       ['01', locale === 'zh' ? '问题理解' : 'Problem'],
                       ['02', locale === 'zh' ? '知识整合' : 'Knowledge'],
@@ -722,10 +727,10 @@ export default function Hero(props: {
                   <div className="mt-4 border-t border-white/10 pt-3 text-[11px] leading-5 text-slate-300/55">
                     <div>
                       {locale === 'zh'
-                        ? '基于 DeepScientist 科研工作流，面向国产大模型与科学假设生成赛题进行系统适配。'
-                        : 'Built on the DeepScientist workflow and adapted for Qwen-based scientific hypothesis generation.'}
+                        ? 'Metis Research：记忆增强、证据评价与树搜索迭代科研平台。'
+                        : 'Metis Research: Memory-enhanced Evaluation and Tree-search for Iterative Science, powered by Qwen.'}
                     </div>
-                    {currentVersion ? <div className="mt-0.5">{`DeepScientist v${currentVersion}`}</div> : null}
+                    {currentVersion ? <div className="mt-0.5">{`Metis Research v${currentVersion}`}</div> : null}
                   </div>
                 </div>
               </div>
