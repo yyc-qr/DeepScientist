@@ -1,586 +1,221 @@
-<h1 align="center" style="font-size: 3.25rem; line-height: 1.02; margin-bottom: 0.4rem;">
-  <img src="assets/branding/logo.svg" alt="DeepScientist logo" width="50" />
-  DeepScientist
-</h1>
-
-
 <p align="center">
-  <a href="https://github.com/ResearAI/DeepScientist">GitHub</a> |
-  <a href="README_ZH.md">中文文档</a> |
-  <a href="JUDGE_README.md">Judge 中文指南</a> |
-  <a href="docs/en/README.md">English Docs</a> |
-  <a href="https://openreview.net/forum?id=cZFgsLq8Gs">Paper</a> |
-  <a href="https://deepscientist.cc/">Website</a>
+  <img src="assets/branding/metis-research.jpg" alt="Metis Research" width="180">
 </p>
 
-<p align="center">
-  <a href="https://github.com/ResearAI/DeepScientist"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ResearAI/DeepScientist?style=for-the-badge&logo=github"></a>
-  <a href="https://event.baai.ac.cn/activities/962"><img alt="Watch Video" src="https://img.shields.io/badge/Watch-Video-5B7266?style=for-the-badge"></a>
-  <a href="LICENSE"><img alt="License Apache-2.0" src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg?style=for-the-badge"></a>
-  <a href="https://www.python.org/"><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-blue?style=for-the-badge&logo=python&logoColor=white"></a>
-</p>
+<h1 align="center">Metis Research</h1>
 
 <p align="center">
-  <a href="https://openreview.net/forum?id=cZFgsLq8Gs"><img alt="ICLR 2026 Top 10 Badge" src="assets/readme/iclr2026_top10_badge.svg" height="44"></a>
+  基于 Qwen 的全流程 AI Scientist 科研协作系统
 </p>
 
-<p align="center">
-  <strong>15-minute local setup</strong> ·
-  <strong>One repo per quest</strong> ·
-  <strong>Visible research progress</strong> ·
-  <strong>Human takeover anytime</strong>
-</p>
+## 项目简介
 
-<p align="center">
-  <strong>Built-in runners: Codex, Claude Code, Kimi Code, OpenCode</strong>
-</p>
+Metis Research 是一个面向长周期科研任务的本地科研智能体系统，也是 2026 年度中国青年科技创新“揭榜挂帅”擂台赛题目 XH-202619“基于国产开源大模型的 AI Scientist 的研发与应用”的参赛项目。
 
-<p align="center">
-  <a href="docs/en/00_QUICK_START.md">Quick Start</a> •
-  <a href="docs/en/02_START_RESEARCH_GUIDE.md">Launch Your First Project</a> •
-  <a href="docs/en/12_GUIDED_WORKFLOW_TOUR.md">Product Tour</a> •
-  <a href="docs/en/15_CODEX_PROVIDER_SETUP.md">Codex Setup</a> •
-  <a href="docs/en/24_CLAUDE_CODE_PROVIDER_SETUP.md">Claude Setup</a> •
-  <a href="docs/en/27_KIMI_CODE_PROVIDER_SETUP.md">Kimi Setup</a> •
-  <a href="docs/en/25_OPENCODE_PROVIDER_SETUP.md">OpenCode Setup</a>
-</p>
+项目以 Qwen 系列模型为核心，围绕科学问题理解、文献与证据整理、知识缺口识别、候选假设生成、研究计划设计、实验执行和反馈修订，构建可持续运行的科研工作流。
 
-<p align="center">
-  Maintainers: <a href="docs/en/22_BENCHSTORE_YAML_REFERENCE.md">BenchStore YAML Guide</a>
-</p>
+系统通过 Quest 工作区、Git 版本管理、结构化记忆和证据记录保存科研过程，使研究路线、实验结果和决策依据能够被追踪、复查和继续使用。
 
-> 使用 PDF 论文评判模块：查看根目录的 [Judge 中文快速启动与参数指南](JUDGE_README.md)。
+## 核心能力
 
-<p align="center">
-  <strong>May 12 update:</strong> v1.6.0 is available with Claude Code, OpenCode, Kimi Code, BenchStore, and science evidence workflows.
-</p>
+- **多源研究输入与任务建模**：接收科学问题、论文、代码仓库、数据集和自然语言目标，将其整理为具有明确范围、资源约束和评价标准的 Quest。
+- **科学问题理解与知识缺口识别**：提取研究对象、关键变量、已有认识和争议，从异常现象、性能瓶颈、证据冲突与文献空白中形成可处理的知识缺口。
+- **文献检索与证据治理**：记录来源和证据路径，区分已有事实、文献解释、模型推断与待验证结论，同时保留支持证据、反对证据和替代解释。
+- **Baseline 复现与指标契约**：准备依赖、执行代码并保存复现过程，固定数据划分、评价指标、优化方向和比较协议，为后续实验提供一致基准。
+- **可检验假设生成**：围绕知识缺口生成少量机制不同的候选假设，并为每个候选补充作用机制、可观察预测、验证方法、证伪条件和放弃条件。
+- **候选路线比较与优化**：通过候选实验图和优化前沿管理候选之间的继承、引用、竞争与融合关系；在数据充分时使用 PUCT-MCTS 综合真实收益、计算成本、不确定性和失败记录推荐路线。
+- **隔离且可复现的实验执行**：为入选路线创建 Git branch 或 worktree，运行代码、测试、消融和分析，并将指标、日志、输出文件及环境问题写入科研产物记录。
+- **闭环评价与流程路由**：结合结构校验、证据约束的 LLM-as-a-Judge、评分聚合和阶段路由，对假设、计划、实验与论文产物进行评价，并决定继续、修订、分支或停止。
+- **长期科研记忆**：使用语义检索、关键词检索、知识图谱扩展和模型重排组织论文笔记、实验结果、失败经验与历史决策，为后续轮次提供可复用上下文。
+- **失败路线资产化**：保留无效假设、负面结果、失败类型和触发条件，避免系统换一种表述后重复走已经被否定的路线。
+- **论文级成果整理**：将实验现象、证据和结论进一步整理为图表、报告、论文草稿及评审材料，并支持本地 PDF 与 LaTeX 工作流。
+- **本地优先与多端协同**：代码、数据、日志和未发表研究内容默认保留在本地；研究人员可通过 Web、TUI 或消息连接器查看进展、暂停任务、修正方向并随时接管。
 
-![deepscientist_install](https://github.com/user-attachments/assets/d8244944-4f70-4e08-94e3-002b74ce70fb)
-
-Unlike one-shot **AI Scientist** or **autoresearch-style systems**, DeepScientist is a **local-first autonomous research studio** that keeps the full loop moving on your machine, from **baselines** and **experiment rounds** to **paper-ready outputs**, with a **10-minute setup**. Powered by **Findings Memory**, **Bayesian optimization**, and the **Research Map**, it keeps turning each new result into the next starting point and goes deep through broader exploration and, when needed, **thousands of experiment validations**.
-
-If you want the technical deep dive behind DeepScientist, watch the [Video](https://event.baai.ac.cn/activities/962).
-
----
-
-https://github.com/user-attachments/assets/3c7abb44-2b25-4477-a011-10a3154d6d76
-
-## Still Spending Your Time On Research Grunt Work?
-
-What drains researchers is often not the lack of ideas. It is the endless cycle of low-leverage work:
-
-- new papers keep coming, but only a small fraction turns into an actionable next-step research plan
-- baseline repos fail on environment, dependency, data, and script issues before real work even starts
-- experiment results get scattered across terminals, scripts, notes, and chats, making later review painful
-- writing, figures, and analysis live in separate tools, so turning them into a coherent paper takes far too long
-
-This is the problem DeepScientist is built to solve:
-
-> turn fragmented, repetitive, easy-to-lose research work into a local AI workspace that can keep moving, keep accumulating, and keep getting stronger over time
-
-## DeepScientist Is Not Just Another "Research Chatbot"
-
-It is not a tool that summarizes papers, throws you a few ideas, and leaves the dirty work to you.
-
-It is much closer to a real long-running AI research partner:
-
-| What common AI tools often look like | What DeepScientist does instead |
-|---|---|
-| Great at chatting, but context disappears quickly | Turns tasks, files, branches, artifacts, and memory into durable state |
-| Good at suggesting ideas, but weak at sustained execution | Pushes papers, baselines, experiments, and writing inside one workspace |
-| Strong automation, but feels like a black box | Lets you inspect the process through the web workspace, Canvas, files, and terminal |
-| Hard to take over once it goes off track | Lets you pause, take over, edit plans, change code, and continue at any time |
-| Each run ends when the run ends | Preserves failed paths, winning paths, and reproduction lessons for the next round |
-
-## About
-
-> DeepScientist is not a one-shot agent demo. It is a system built for long-horizon research work.
-
-## What Can It Actually Help You Get Done?
-
-### 1. Start a real project from a paper or a research question
-
-- feed it a core paper, a GitHub repository, or a natural-language research objective
-- it turns those inputs into an executable quest instead of a chat that loses state after a few turns
-
-### 2. Reproduce baselines and keep the reproduction reusable
-
-- restore repositories, prepare environments, handle dependencies, and track the critical failures
-- preserve what broke, what got fixed, and which steps are trustworthy for future rounds
-
-### 3. Run experiments continuously instead of stopping after one pass
-
-- propose the next hypothesis from existing results
-- branch, ablate, compare, and record conclusions
-- keep failed routes as assets instead of deleting them
-
-### 4. Turn results into materials you can actually ship
-
-- organize findings, conclusions, and analysis
-- produce figures, reports, and paper drafts
-- support local PDF and LaTeX compilation workflows
-
-### 5. Follow the same research effort from multiple surfaces
-
-- the web workspace in your browser
-- the TUI workflow on a remote server
-- external connector surfaces for collaboration and progress updates
-
-The current docs already cover these collaboration channels:
-
-- [Weixin](docs/en/10_WEIXIN_CONNECTOR_GUIDE.md)
-- [QQ](docs/en/03_QQ_CONNECTOR_GUIDE.md)
-- [Telegram](docs/en/16_TELEGRAM_CONNECTOR_GUIDE.md)
-- [WhatsApp](docs/en/17_WHATSAPP_CONNECTOR_GUIDE.md)
-- [Feishu](docs/en/18_FEISHU_CONNECTOR_GUIDE.md)
-- [Lingzhu / Rokid](docs/en/04_LINGZHU_CONNECTOR_GUIDE.md)
-
-## Why Is It Easier To Keep Using?
-
-What retains users is not a flashy demo. It is a system that becomes more useful the longer you work with it.
-
-DeepScientist tends to stick for four reasons:
-
-### Local-first by default
-
-- code, experiments, drafts, and project state stay on your own machine or server by default
-- this is especially valuable for unpublished ideas, sensitive experiment history, and longer-running research loops
-
-### One repo per quest
-
-- every quest is a real Git repository
-- branches, worktrees, files, and artifacts naturally express research structure
-
-### The process is not a black box
-
-- it does not only give you an output
-- you can inspect what it read, what it changed, what it kept, and what it plans to do next
-
-### Human collaboration is built in
-
-- DeepScientist can move autonomously
-- you can also step in, edit, redirect, and hand control back whenever you want
-
-## Why Try It Now?
-
-Because this is not just a concept. It is a real system with public docs, a public paper, and a public install path.
-
-- `2026/03/24`: DeepScientist officially released `v1.5`
-- `2026/02/01`: the paper went live on [OpenReview](https://openreview.net/forum?id=cZFgsLq8Gs) for `ICLR 2026`
-- npm install path is already available: [`@researai/deepscientist`](https://www.npmjs.com/package/@researai/deepscientist)
-- both Chinese and English docs are available, along with Web, TUI, and connector entry points
-
-## Product Preview
-
-### Architecture Overview
-
-<p align="center">
-  <img src="assets/readme/architecture-promo.png" alt="DeepScientist architecture overview" width="92%" />
-</p>
-
-### Example Outputs
-
-<table>
-<tr>
-<td width="50%">
-<img src="assets/readme/paper-output-1.png" alt="DeepScientist generated paper example 1" width="100%" />
-</td>
-<td width="50%">
-<img src="assets/readme/paper-output-2.png" alt="DeepScientist generated paper example 2" width="100%" />
-</td>
-</tr>
-<tr>
-<td valign="top">
-<b>Example paper output 1</b><br/>
-Paper-facing deliverables can be preserved directly inside the quest instead of being split across external tools.
-</td>
-<td valign="top">
-<b>Example paper output 2</b><br/>
-DeepScientist can carry work through writing, review, figure polish, and export workflows.
-</td>
-</tr>
-</table>
-
-### Workspace Preview
-
-<table>
-<tr>
-<td width="33%">
-<img src="assets/readme/start-research-promo.png" alt="Start Research dialog" width="100%" />
-</td>
-<td width="33%">
-<img src="assets/readme/canvas-promo.png" alt="Canvas workspace preview" width="100%" />
-</td>
-<td width="33%">
-<img src="assets/readme/studio-details-promo.png" alt="Studio and details workspace preview" width="100%" />
-</td>
-</tr>
-<tr>
-<td valign="top">
-<b>Start Research</b><br/>
-Kick off a quest from a paper, repository, or natural-language goal.
-</td>
-<td valign="top">
-<b>Canvas</b><br/>
-Inspect branches, baselines, and accumulated research structure as a visible map.
-</td>
-<td valign="top">
-<b>Studio + Details</b><br/>
-Review metrics, traces, and project state without leaving the same workspace.
-</td>
-</tr>
-</table>
-
-### Progress Reporting
-
-<p align="center">
-  <img src="assets/readme/progress-reporting-promo.png" alt="DeepScientist progress reporting example" width="88%" />
-</p>
-
-### Projects surface after long-running work
-
-![DeepScientist projects surface](assets/readme/projects-surface.png)
-
-## Who Will Love DeepScientist Most?
-
-- graduate students and engineers who want to reproduce papers and push beyond existing baselines
-- labs or research teams running long experiment loops, ablations, and structured result analysis
-- people who want code, experiments, notes, and writing to live in one workspace
-- users who do not want to hand unpublished ideas and intermediate results directly to a pure cloud workflow
-- people who want to run work on servers while following progress from web, TUI, or messaging surfaces
-
-## The Core Philosophy Behind DeepScientist
-
-We believe a system that is actually suitable for research should at least satisfy these principles:
-
-- one quest, one repository, instead of letting everything dissolve after a short conversation
-- branches and worktrees should express research routes naturally instead of being forced into chat history
-- failed paths should be preserved, summarized, and reused instead of overwritten
-- human researchers should always retain takeover power instead of being locked outside the loop
-- the research process should be reviewable, inspectable, and auditable instead of relying on "the model says it did it"
-
-If that sounds like the way you want to work, DeepScientist is worth trying now.
-
-## 🚀 Get Started In 30 Seconds
-
-If you want to try it right now, choose one of these two paths: run the npm commands yourself, or ask the coding tool you already use to install it for you.
-
-Platform note: DeepScientist fully supports Linux and macOS. Native Windows support is currently experimental (strongly recommend WSL2).
-
-### Option 1: Manual Install With npm
-
-Use this path when you already know which runner you want and prefer to control the install, login, and launch commands yourself.
-
-DeepScientist ships four built-in runners:
-
-- `codex`: use this when `codex` already works directly on your machine
-- `claude`: use this when `claude` already works directly on your machine
-- `kimi`: use this when `kimi` already works directly on your machine
-- `opencode`: use this when `opencode` already works directly on your machine
-
-If one of these CLIs already works for you, DeepScientist can usually meet you there instead of asking you to rebuild your whole setup first.
-
-Think of the startup choice like this: bring one runner that already works, and DeepScientist gives you a persistent local research workspace around it.
-
-If you just want the safest recommendation, start with Codex first.
-
-🎯 Recommended first run: `codex`
-
-```bash
-npm install -g @researai/deepscientist
-codex login
-ds --here
-```
-
-If Claude Code already works directly in your shell, use this lane:
-
-```bash
-npm install -g @researai/deepscientist
-claude --version
-ds doctor --runner claude
-ds --here --runner claude
-```
-
-If Kimi Code already works directly in your shell, use this lane:
-
-```bash
-npm install -g @researai/deepscientist
-kimi --version
-ds doctor --runner kimi
-ds --here --runner kimi
-```
-
-If OpenCode already works directly in your shell, use this lane:
-
-```bash
-npm install -g @researai/deepscientist
-opencode --version
-ds doctor --runner opencode
-ds --here --runner opencode
-```
-
-If you want to connect Gemini or Ollama, first use the runner-specific docs instead of guessing DeepScientist fields:
-
-- Gemini: prefer [OpenCode Setup](docs/en/25_OPENCODE_PROVIDER_SETUP.md)
-- Ollama: choose Codex, Claude Code, or OpenCode with [Local Model Backends Guide](docs/en/21_LOCAL_MODEL_BACKENDS_GUIDE.md)
-
-To stop the managed local daemon and all currently running agents:
-
-```bash
-ds --stop
-```
-
-🛠 Prefer installing from a Git checkout instead of npm? Use the repo path directly:
-
-```bash
-git clone https://github.com/ResearAI/DeepScientist.git
-cd DeepScientist
-bash install.sh
-ds
-```
-
-### Option 2: Let A Coding Tool Install It
-
-Use this path when you already work inside Codex, Claude Code, OpenCode, Cursor, or another coding agent. There are only two steps:
-
-1. Launch the coding tool in a directory where you are comfortable installing DeepScientist.
-2. Copy and send this prompt:
+## 工作流程
 
 ```text
-Please install and launch DeepScientist on this machine. The official repo is https://github.com/ResearAI/DeepScientist and the docs start at https://github.com/ResearAI/DeepScientist/blob/main/docs/en/README.md . First inspect Node.js/npm, git, Python, OS, and shell environment. If global npm install is appropriate, run npm install -g @researai/deepscientist and verify ds --help. If source install is safer, git clone https://github.com/ResearAI/DeepScientist.git, cd DeepScientist, read the README, and run bash install.sh. After installation, confirm at least one runner works locally, such as codex, claude, opencode, or kimi; authenticate that CLI first, then run ds doctor --runner <name>, start with ds --here, and report the local URL plus the exact config docs I should read next.
+科学问题、论文、代码或数据
+            ↓
+      问题理解与范围界定
+            ↓
+      文献检索与证据整理
+            ↓
+        知识缺口识别
+            ↓
+        候选假设生成
+            ↓
+      比较、核验与路线筛选
+            ↓
+        研究计划设计
+            ↓
+       实验执行与结果评价
+            ↓
+       反馈修订或成果整理
 ```
 
-If you plan to edit the UI or TUI from source, also install the workspace dependencies:
+## 系统组成
+
+| 组成部分 | 主要作用 |
+|---|---|
+| Qwen Runner | 理解任务、生成假设、调用工具并组织研究过程 |
+| Skills 工作流 | 管理调研、基线、假设、实验、分析、写作和评审阶段 |
+| MCP 工具 | 连接科研记忆、产物管理、文献检索和命令执行能力 |
+| Quest 工作区 | 为每个科研问题保存独立的代码、文档、日志和结果 |
+| Git 版本管理 | 记录研究路线、实验修改和阶段性状态 |
+| 候选实验图与优化前沿 | 管理候选路线之间的继承、比较和筛选关系 |
+| PUCT-MCTS | 在数据条件满足时，根据真实记录辅助推荐后续实验路线 |
+| Web 与 TUI | 展示项目状态，并支持研究人员查看和介入 |
+
+## 标准输出
+
+Metis Research 可以根据任务和现有证据生成结构化的《科学假设与研究计划》，主要包括：
+
+- 待研究问题
+- 解决思路与推理依据
+- 候选科学假设
+- 支持证据、反对证据和替代解释
+- 可检验预测与证伪条件
+- 必要的技术手段
+- 数据来源与拟采集数据
+- 方法与实验设计
+- 基线和评价指标
+- 预期结果或实际结果
+- 论文标题与摘要草案
+- 可核验的参考文献
+- 风险、限制和停止条件
+
+## 快速开始
+
+### 环境要求
+
+- Node.js 18.18 或更高版本
+- npm 9 或更高版本
+- Python 3.11 或更高版本
+- Git
+- 可用的阿里云百炼 Qwen API 密钥
+
+### 从源码安装
 
 ```bash
-npm --prefix src/ui install
-npm --prefix src/tui install
+bash install.sh
 ```
 
-If you prefer the interactive first-run flow, run this once first:
+### 配置 Qwen
+
+PowerShell：
+
+```powershell
+$env:QWEN_API_KEY = "你的 API Key"
+```
+
+Bash：
 
 ```bash
-codex
+export QWEN_API_KEY="你的 API Key"
 ```
 
-If `codex` still appears to be missing after installing DeepScientist, take the explicit repair path instead of assuming the bundled dependency was linked correctly:
+请勿将 API Key 写入代码或提交到仓库。
+
+### 检查运行环境
 
 ```bash
-npm install -g @openai/codex
-which codex
-codex login
+ds doctor --runner qwen
 ```
 
-If `which codex` still prints nothing after that, fix the npm global bin path first, then retry `codex login` and `ds doctor`.
+### 启动 Web 前端
 
-Important runner note:
+运行下面的命令会同时启动本地 daemon 和 Web 工作区，并在默认浏览器中打开前端：
 
-- DeepScientist can fall back to npm-bundled helper copies for `codex`, `claude`, and `opencode` when they are installed with the package. Kimi Code is treated as an external CLI unless a compatible local `kimi` helper is present.
-- Runner authentication and provider configuration still belong to the underlying CLI. Make `codex`, `claude`, `kimi`, or `opencode` work once in your shell, then run `ds doctor --runner <name>`.
-- You can also start DeepScientist first with the default runner and switch/configure Claude Code, Kimi Code, or OpenCode later from the web workspace settings.
+```bash
+ds --runner qwen
+```
 
-After startup, the default local address is:
+如果浏览器没有自动打开，请手动访问：
 
 ```text
 http://127.0.0.1:20999
 ```
 
-Local browser auth is now optional and disabled by default. If you want a per-launch local access password, start with:
+只启动服务、不自动打开浏览器：
 
 ```bash
-ds --auth true
+ds --runner qwen --no-browser
 ```
 
-Then you only need to do three things:
+如需使用其他端口：
 
-1. click `Start Research`
-2. fill in the research goal, baseline links, paper links, or local paths
-3. let DeepScientist start a real research project that can keep evolving locally
+```bash
+ds --runner qwen --port 21000
+```
 
-If this is your first run, prefer an isolated environment, a non-root user, and a local machine. For the full details, see:
+此时前端地址为 `http://127.0.0.1:21000`。
 
-- [00 Quick Start](docs/en/00_QUICK_START.md)
-- [15 Codex Provider Setup](docs/en/15_CODEX_PROVIDER_SETUP.md)
-- [24 Claude Code Setup](docs/en/24_CLAUDE_CODE_PROVIDER_SETUP.md)
-- [27 Kimi Code Setup](docs/en/27_KIMI_CODE_PROVIDER_SETUP.md)
-- [25 OpenCode Setup](docs/en/25_OPENCODE_PROVIDER_SETUP.md)
-- [09 Doctor](docs/en/09_DOCTOR.md)
+常用管理命令：
 
-## 🧭 Choose Your Starting Path
+```bash
+ds --status
+ds --restart
+ds --stop
+```
 
-### ⚡ I just want to get it running first
+### 前端开发模式
 
-- [00 Quick Start](docs/en/00_QUICK_START.md)
-- [12 Guided Workflow Tour](docs/en/12_GUIDED_WORKFLOW_TOUR.md)
+如需修改或调试前端，可以分别启动后端和 Vite 开发服务器。
 
-### 🧪 I want to launch a real project today
+终端一，启动后端：
 
-- [02 Start Research Guide](docs/en/02_START_RESEARCH_GUIDE.md)
-- [01 Settings Reference](docs/en/01_SETTINGS_REFERENCE.md)
+```bash
+node bin/ds.js --runner qwen --no-browser --daemon-only
+```
 
-### 🖥 I mainly work on servers and terminals
+终端二，安装前端依赖并启动开发服务器：
 
-- [05 TUI Guide](docs/en/05_TUI_GUIDE.md)
-  Includes `ds --tui --debug`, redacted debug JSONL, and Web/TUI comparison guidance.
+```bash
+npm run ui:install
+npm run ui:dev
+```
 
-### 🔌 I want to connect my own models or external collaboration channels
-
-- [15 Codex Provider Setup](docs/en/15_CODEX_PROVIDER_SETUP.md)
-- [24 Claude Code Setup](docs/en/24_CLAUDE_CODE_PROVIDER_SETUP.md)
-- [27 Kimi Code Setup](docs/en/27_KIMI_CODE_PROVIDER_SETUP.md)
-- [25 OpenCode Setup](docs/en/25_OPENCODE_PROVIDER_SETUP.md)
-- [21 Local Model Backends Guide](docs/en/21_LOCAL_MODEL_BACKENDS_GUIDE.md)
-- [Weixin Connector Guide](docs/en/10_WEIXIN_CONNECTOR_GUIDE.md)
-- [QQ Connector Guide](docs/en/03_QQ_CONNECTOR_GUIDE.md)
-- [Telegram Connector Guide](docs/en/16_TELEGRAM_CONNECTOR_GUIDE.md)
-- [WhatsApp Connector Guide](docs/en/17_WHATSAPP_CONNECTOR_GUIDE.md)
-- [Feishu Connector Guide](docs/en/18_FEISHU_CONNECTOR_GUIDE.md)
-
-### 🧠 I want to understand the system design first
-
-- [Docs Index](docs/en/README.md)
-- [Core Architecture Guide](docs/en/13_CORE_ARCHITECTURE_GUIDE.md)
-- [Prompt, Skills, and MCP Guide](docs/en/14_PROMPT_SKILLS_AND_MCP_GUIDE.md)
-
-## Autonomous Research Systems
-
-### End-to-End Autonomous Research Systems
-
-| System | System Type | E2E | Research Map | Workshop | Keeps Growing | Channels | Figure & Rebuttal & Review |
-|---|---|---|---|---|---|---|---|
-| [autoresearch](https://github.com/karpathy/autoresearch) | Open-source |  |  | ✓ |  |  |  |
-| [RD-Agent](https://github.com/microsoft/RD-Agent) | Open-source |  |  |  | ✓ |  |  |
-| [Agent Laboratory](https://github.com/SamuelSchmidgall/AgentLaboratory) | Open-source | ✓ |  | ✓ | ✓ |  |  |
-| [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) | Open-source | ✓ |  |  |  |  |  |
-| [AI-Scientist-v2](https://github.com/SakanaAI/AI-Scientist-v2) | Open-source | ✓ |  |  |  |  |  |
-| [AutoResearchClaw](https://github.com/aiming-lab/AutoResearchClaw) | Open-source | ✓ |  |  | ✓ | ✓ |  |
-| [ClawPhD](https://github.com/ZhihaoAIRobotic/ClawPhD) | Open-source |  |  | ✓ |  | ✓ |  |
-| [Dr. Claw](https://github.com/OpenLAIR/dr-claw) | Open-source | ✓ |  | ✓ |  | ✓ |  |
-| [FARS](https://analemma.ai/fars/) | Closed-source | ✓ |  |  |  |  |  |
-| [EvoScientist](https://github.com/EvoScientist/EvoScientist) | Open-source | ✓ |  | ✓ | ✓ | ✓ |  |
-| [ScienceClaw](https://github.com/beita6969/ScienceClaw) | Open-source |  |  |  | ✓ | ✓ |  |
-| [claude-scholar](https://github.com/Galaxy-Dawn/claude-scholar) | Open-source | ✓ |  | ✓ | ✓ |  |  |
-| [Research-Claw](https://github.com/wentorai/Research-Claw) | Open-source | ✓ |  | ✓ | ✓ | ✓ |  |
-| [DeepScientist](https://github.com/ResearAI/DeepScientist) | Open-source | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-
-## Documentation
-
-- [English Docs Index](docs/en/README.md)
-- [Chinese Docs Index](docs/zh/README.md)
-
-## NLPCC 2026 AISB Challenge
-
-If you want to benchmark or extend AI scientist systems in the wild, the NLPCC 2026 AISB shared task is a natural next stop:
-
-- [Registration](http://tcci.ccf.org.cn/conference/2026/shared-tasks/)
-- [Task Repository](https://github.com/ResearAI/NLPCC-2026-Task9-AISB)
-
-<p align="center">
-  <img src="assets/readme/aisb-poster.jpeg" alt="NLPCC 2026 AISB shared task poster" width="88%" />
-</p>
-
-## For Developers And Maintainers
-
-If you are developing or maintaining DeepScientist, continue with:
-
-- [Architecture](docs/en/90_ARCHITECTURE.md)
-- [Development Guide](docs/en/91_DEVELOPMENT.md)
-- [BenchStore YAML Guide](docs/en/22_BENCHSTORE_YAML_REFERENCE.md)
-- [CONTRIBUTING](CONTRIBUTING.md)
-
-## Citation
-
-If DeepScientist materially helps your paper, report, or research workflow, please cite the DeepScientist paper and disclose meaningful AI assistance honestly.
-
-This is a strong request for fair academic attribution, not an extra software license condition.
-
-Useful links:
-
-- Paper: `https://openreview.net/forum?id=cZFgsLq8Gs`
-- Repository citation metadata: [CITATION.cff](CITATION.cff)
-- Citation and attribution guidance: [docs/en/26_CITATION_AND_ATTRIBUTION.md](docs/en/26_CITATION_AND_ATTRIBUTION.md)
-- Acknowledgements, including optional FermiLink science-workflow attribution: [docs/en/99_ACKNOWLEDGEMENTS.md](docs/en/99_ACKNOWLEDGEMENTS.md)
-- Name and logo usage: [TRADEMARK.md](TRADEMARK.md)
-
-Suggested acknowledgment text:
+前端开发地址为：
 
 ```text
-We used DeepScientist to assist parts of the research workflow, including selected planning, implementation, experiment orchestration, analysis, and/or writing support. Final judgments, claims, and reported real experimental results remain the responsibility of the human authors.
+http://127.0.0.1:21888/ui/
 ```
 
-DeepScientist is jointly developed by Yixuan Weng, Weixu Zhao, Shichen Li, Zhen Lin, and Minjun Zhu.
+开发服务器会将 `/api` 和 `/assets` 请求代理到默认后端地址 `http://127.0.0.1:20999`。
 
-```bibtex
-@inproceedings{
-weng2026deepscientist,
-title={DeepScientist: Advancing Frontier-Pushing Scientific Findings Progressively},
-author={Yixuan Weng and Minjun Zhu and Qiujie Xie and QiYao Sun and Zhen Lin and Sifan Liu and Yue Zhang},
-booktitle={The Fourteenth International Conference on Learning Representations},
-year={2026},
-url={https://openreview.net/forum?id=cZFgsLq8Gs}
-}
+## 赛题批量测试
+
+项目提供 Science Q101-Q125 的批量测试脚本，支持试运行、正式执行和断点恢复。
+
+```bash
+python scripts/run_science_questions_batch.py --dry-run --questions 101,125
+python scripts/run_science_questions_batch.py --questions 101-125
+python scripts/run_science_questions_batch.py --questions 101-125 --resume
 ```
 
-If this feels like the research workflow you have been waiting for, give the project a star. Every star makes it easier for more researchers who actually need it to find it.
+每道问题使用独立 Quest 保存结果，主要生成问题分析、证据矩阵、候选假设、研究计划、自动评价和修订记录。
 
-## Community
+## 项目结构
 
-Welcome to join the WeChat group for discussion.
+```text
+Metis Research
+├── src/deepscientist/    核心服务与科研工作流
+├── src/ui/               Web 用户界面
+├── src/skills/           分阶段科研技能
+├── scripts/              批量测试与辅助脚本
+├── docs/                 使用与配置文档
+├── tests/                自动化测试
+└── output/               运行结果与导出文件
+```
 
-<p align="center">
-  <img src="assets/readme/wechat15.jpg" alt="DeepScientist WeChat group" width="360" />
-</p>
+## 使用边界
 
-## More From ResearAI
+Metis Research 生成的是候选科学假设和研究计划，不代表已经完成科学发现或真实验证。
 
-If you like DeepScientist, you may also want to explore the rest of the ResearAI ecosystem:
+模型输出仍需研究人员检查，尤其是文献真实性、专业判断、实验条件、数据合规性和最终科学结论。当前系统在学科专用数据接入、多模态科学数据处理、显式多角色协作和系统化假设质量评测方面仍在完善。
 
-| Project | What it does | Stars |
-|---|---|---|
-| **[MeOS](https://github.com/ResearAI/MeOS)** | Fork yourself as a Skill, so agents understand you better | ![GitHub stars](https://img.shields.io/github/stars/ResearAI/MeOS?style=flat&logo=github) |
-| [AutoFigure](https://github.com/ResearAI/AutoFigure) | generate publication-ready figures | ![GitHub stars](https://img.shields.io/github/stars/ResearAI/AutoFigure?style=flat&logo=github) |
-| [AutoFigure-Edit](https://github.com/ResearAI/AutoFigure-Edit) | generate editable vector paper figures | ![GitHub stars](https://img.shields.io/github/stars/ResearAI/AutoFigure-Edit?style=flat&logo=github) |
-| [DeepReviewer-v2](https://github.com/ResearAI/DeepReviewer-v2) | review papers and suggest revisions | ![GitHub stars](https://img.shields.io/github/stars/ResearAI/DeepReviewer-v2?style=flat&logo=github) |
-| [Awesome-AI-Scientist](https://github.com/ResearAI/Awesome-AI-Scientist) | curated AI scientist landscape | ![GitHub stars](https://img.shields.io/github/stars/ResearAI/Awesome-AI-Scientist?style=flat&logo=github) |
+系统运行还可能受到模型 API、网络环境、计算资源和 LaTeX 编译环境的影响。
 
-## Roadmap
+## 许可
 
-We are building DeepScientist as a long-term local-first research operating system.
-
-The next major upgrades focus on four directions:
-
-### 1. Deeper Research Loops
-
-- AI Scientist Benchmark support for more realistic evaluation and comparison
-- smoother automatic baseline upload, download, and reuse
-- stronger experiment replay, comparison, and paper-facing outputs
-
-### 2. Stronger Long-Horizon Memory
-
-- stronger Memory and Findings Memory mechanisms
-- better cross-run and cross-quest reuse
-- less repeated failure and less rediscovery cost over long projects
-
-### 3. Richer Multimodal And Collaborative Workflows
-
-- VideoAnything-style multimodal research capabilities
-- better local-model, connector, and copilot/autonomous collaboration flows
-- a more efficient and more reliable DeepScientist system across local, collaborative, and long-horizon research settings
-
-### 4. Stronger Security And Safer Deployment
-
-- safer local-first and server-side deployment defaults
-- stronger auth, permission, and connector-surface protection
-- less fabrication, lower hallucination, and more verification-grounded outputs
-- better auditability for long-running autonomous research workflows
-
-If this direction is interesting to you, please give the project a `Watch` and a `Star`:
-
-[![Watch DeepScientist](https://img.shields.io/github/watchers/ResearAI/DeepScientist?style=for-the-badge&logo=github&label=Watch%20DeepScientist)](https://github.com/ResearAI/DeepScientist/watchers)
-[![Star DeepScientist](https://img.shields.io/github/stars/ResearAI/DeepScientist?style=for-the-badge&logo=github&label=Star%20DeepScientist)](https://github.com/ResearAI/DeepScientist/stargazers)
-
----
-
-This project is maintained by WestlakeNLP. If you run into problems, please ask on [DeepWiki](https://deepwiki.com/ResearAI/DeepScientist) first; if it still cannot be resolved, open an issue.
-
-WestlakeNLP is led by ACL Fellow Professor Yue Zhang. If you are interested in a long-term internship, PhD position, or research assistant opportunity, contact Professor Yue Zhang at `zhangyue@westlake.edu.cn`.
+本项目遵循 Apache License 2.0。
